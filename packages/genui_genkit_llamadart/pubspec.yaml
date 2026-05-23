@@ -1,0 +1,25 @@
+name: genui_genkit_llamadart
+description: Run Flutter GenUI turns on-device by resolving llamadart models and adapting them through Genkit.
+version: 0.1.0-dev
+publish_to: none
+
+topics:
+  - ai
+  - genkit
+  - llamadart
+  - on-device-ai
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  genkit: ^0.13.2
+  genkit_llamadart: ^1.1.1
+  genui_genkit:
+    path: ../genui_genkit
+  llamadart: ^0.6.15
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^6.0.0
