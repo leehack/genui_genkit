@@ -46,6 +46,17 @@ final session = GenkitGenUiSession(
 );
 ```
 
+For on-device/mobile models, use the compact prompt builder to reduce prompt
+evaluation time while keeping the A2UI schema available:
+
+```dart
+final session = GenkitGenUiSession(
+  backend: backend,
+  catalog: appCatalog,
+  systemPromptBuilder: compactGenUiSystemPromptBuilder,
+);
+```
+
 The host app owns provider setup. For Gemini, OpenAI, llamadart, or another
 provider, register the plugin with Genkit first and pass the resulting
 `ModelRef` to `GenkitBackend`.

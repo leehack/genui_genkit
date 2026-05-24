@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../runtime/app_runtime.dart';
 import '../widgets/conversation_pane.dart';
+import '../widgets/performance_summary_bar.dart';
 import '../widgets/prompt_composer.dart';
 import '../widgets/prompt_suggestion_bar.dart';
 import '../widgets/raw_output_panel.dart';
@@ -299,6 +300,7 @@ class _MainContent extends StatelessWidget {
           isProcessing: session.isProcessing,
           compact: compactLayout,
         ),
+        PerformanceSummaryBar(runtime: runtime, compact: compactLayout),
         SizedBox(height: compactLayout ? 6 : 8),
         PromptSuggestionBar(
           isProcessing: session.isProcessing,
@@ -412,14 +414,12 @@ class _HeroHeader extends StatelessWidget {
           icon: Icons.widgets_outlined,
           onPressed: onShowCatalog,
         ),
-        if (!compact) ...[
-          const SizedBox(width: 6),
-          _HeaderToolButton(
-            tooltip: 'Raw stream',
-            icon: Icons.data_object,
-            onPressed: onShowRaw,
-          ),
-        ],
+        const SizedBox(width: 6),
+        _HeaderToolButton(
+          tooltip: 'Raw stream',
+          icon: Icons.data_object,
+          onPressed: onShowRaw,
+        ),
         const SizedBox(width: 6),
         _HeaderToolButton(
           tooltip: 'New run',

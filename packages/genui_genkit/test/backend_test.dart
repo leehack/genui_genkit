@@ -118,6 +118,42 @@ void main() {
     await ai.shutdown();
   });
 
+  test(
+    'GenkitBackend emits final text when provider sends no chunks',
+    () async {
+      final ai = genkit.Genkit();
+      ai.defineModel(
+        name: 'non-streaming-model',
+        fn: (request, context) async {
+          return genkit.ModelResponse(
+            finishReason: genkit.FinishReason.stop,
+            message: genkit.Message(
+              role: genkit.Role.model,
+              content: [
+                genkit.TextPart(text: 'final ${request.messages.last.text}'),
+              ],
+            ),
+          );
+        },
+      );
+      final backend = GenkitBackend<Map<String, dynamic>>(
+        ai: ai,
+        model: genkit.modelRef('non-streaming-model'),
+      );
+
+      final events = await backend
+          .send(GenUiTurnRequest(message: ChatMessage.user('answer')))
+          .toList();
+
+      expect(events, hasLength(2));
+      expect((events[0] as GenUiTextChunk).text, 'final answer');
+      expect(events[1], isA<GenUiTurnDone>());
+
+      await backend.dispose();
+      await ai.shutdown();
+    },
+  );
+
   test('HybridGenUiBackend routes turns by policy', () async {
     final local = _RecordingBackend(
       (request) => Stream<GenUiBackendEvent>.fromIterable([

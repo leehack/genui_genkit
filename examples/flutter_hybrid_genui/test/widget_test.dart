@@ -4,9 +4,11 @@ import 'package:flutter_hybrid_genui/src/activity_catalog.dart';
 import 'package:flutter_hybrid_genui/src/app.dart';
 import 'package:flutter_hybrid_genui/src/model_config.dart';
 import 'package:flutter_hybrid_genui/src/runtime/app_runtime.dart';
+import 'package:flutter_hybrid_genui/src/runtime/performance_tracking_backend.dart';
 import 'package:flutter_hybrid_genui/src/widgets/raw_output_panel.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:genui_genkit/genui_genkit.dart';
+import 'package:llamadart/llamadart.dart' as llama;
 
 void main() {
   testWidgets('starts in hybrid mode with the default local route', (
@@ -57,6 +59,7 @@ void main() {
     expect(find.text('Local route'), findsOneWidget);
     expect(find.byTooltip('AI route'), findsOneWidget);
     expect(find.byTooltip('Route settings'), findsOneWidget);
+    expect(find.byTooltip('Raw stream'), findsOneWidget);
     expect(find.text('Local model queued'), findsOneWidget);
 
     await tester.tap(find.byTooltip('AI route'));
@@ -112,6 +115,94 @@ void main() {
     );
   });
 
+  testWidgets('local settings can switch Vulkan and GPU layer budget', (
+    tester,
+  ) async {
+    final runtime = AppRuntime.fromEnvironment(const {'HOME': '/Users/test'});
+    addTearDown(runtime.dispose);
+
+    await tester.pumpWidget(FlutterHybridGenUiApp(runtime: runtime));
+    await tester.tap(find.byTooltip('Route settings'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Vulkan'));
+    await tester.pumpAndSettle();
+    final localFields = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(localFields.at(2), '16');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(
+      runtime.localModelConfig.value.inferenceOptions.preferredBackend,
+      llama.GpuBackend.vulkan,
+    );
+    expect(runtime.localModelConfig.value.inferenceOptions.gpuLayers, 16);
+    expect(runtime.modelStatus!.value.phase, ModelRuntimePhase.idle);
+  });
+
+  testWidgets('shows local turn performance metrics', (tester) async {
+    final session = GenkitGenUiSession(
+      backend: LocalGenkitBackend(generate: (_) => Stream.value('Ack')),
+      catalog: activityCatalog,
+    );
+    final turnPerformance = ValueNotifier<TurnPerformanceSnapshot>(
+      const TurnPerformanceSnapshot(
+        phase: TurnPerformancePhase.completed,
+        routeName: 'local',
+        profile: TurnPerformanceProfile(
+          backendName: 'vulkan',
+          gpuLayers: 16,
+          contextSize: 4096,
+          batchSize: 512,
+          microBatchSize: 128,
+          maxTokens: 512,
+        ),
+        elapsed: Duration(milliseconds: 3200),
+        timeToFirstChunk: Duration(milliseconds: 800),
+        outputCharacters: 160,
+        chunkCount: 4,
+      ),
+    );
+    final runtime = AppRuntime.test(
+      session: session,
+      turnPerformance: turnPerformance,
+    );
+    addTearDown(runtime.dispose);
+
+    await tester.pumpWidget(FlutterHybridGenUiApp(runtime: runtime));
+
+    expect(find.textContaining('Backend'), findsWidgets);
+    expect(find.textContaining('vulkan'), findsOneWidget);
+    expect(find.textContaining('Decode'), findsOneWidget);
+    expect(find.textContaining('est tok/s'), findsWidgets);
+  });
+
+  testWidgets('shows local model loading progress', (tester) async {
+    final session = GenkitGenUiSession(
+      backend: LocalGenkitBackend(generate: (_) => Stream.value('Ack')),
+      catalog: activityCatalog,
+    );
+    final config = ModelConfig.fromEnvironment(const {'HOME': '/Users/test'});
+    final modelStatus = ValueNotifier<ModelRuntimeStatus>(
+      ModelRuntimeStatus.loading(
+        config: config,
+        resolvedModelPath: '/models/gemma-4-E2B-it-Q4_K_S.gguf',
+      ),
+    );
+    final runtime = AppRuntime.test(session: session, modelStatus: modelStatus);
+    addTearDown(runtime.dispose);
+    addTearDown(modelStatus.dispose);
+
+    await tester.pumpWidget(FlutterHybridGenUiApp(runtime: runtime));
+
+    expect(find.text('Loading local model'), findsOneWidget);
+    expect(find.textContaining('ctx 4096'), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+  });
+
   testWidgets('renders prompt buttons with an injected session', (
     tester,
   ) async {
@@ -139,7 +230,7 @@ void main() {
 
     await tester.pumpWidget(FlutterHybridGenUiApp(runtime: runtime));
     await tester.tap(find.text('Build day plan'));
-    await tester.pumpAndSettle();
+    await _pumpUntilFound(tester, find.text('Rainy afternoon in Montreal'));
 
     expect(find.text('Rainy afternoon in Montreal'), findsOneWidget);
     expect(find.text('Cozy cafe stop'), findsOneWidget);
@@ -209,6 +300,13 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Raw stream'), findsOneWidget);
   });
+}
+
+Future<void> _pumpUntilFound(WidgetTester tester, Finder finder) async {
+  for (var i = 0; i < 100; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+    if (tester.any(finder)) return;
+  }
 }
 
 Stream<String> _sampleActivityStream() {

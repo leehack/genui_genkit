@@ -1,5 +1,8 @@
+import 'package:flutter_hybrid_genui/src/activity_catalog.dart';
+import 'package:flutter_hybrid_genui/src/activity_prompt.dart';
 import 'package:flutter_hybrid_genui/src/model_config.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:genui_genkit/genui_genkit.dart';
 import 'package:llamadart/llamadart.dart' as llama;
 
 void main() {
@@ -10,6 +13,47 @@ void main() {
     expect(config.modelSource.canonicalKey, contains('gemma-4-E2B-it-GGUF'));
     expect(config.modelSourceDisplayName, defaultModelDisplayName);
     expect(config.cacheDirectory, '/Users/test/.cache/llamadart/genui');
+    expect(config.contextSize, 4096);
+    expect(config.inferenceOptions.batchSize, 512);
+    expect(config.inferenceOptions.microBatchSize, 256);
+    expect(config.maxTokens, 512);
+    expect(config.temperature, 0);
+  });
+
+  test('default local context leaves room for the GenUI catalog prompt', () {
+    final config = ModelConfig.fromEnvironment(const {'HOME': '/Users/test'});
+    final prompt = activityGenUiSystemPromptBuilder([
+      activityCatalog,
+    ], const GenUiSystemPromptOptions());
+    final approximatePromptTokens = (prompt.length / 3).ceil();
+
+    expect(
+      approximatePromptTokens + config.maxTokens,
+      lessThan(config.contextSize),
+    );
+  });
+
+  test('compact GenUI prompt is smaller than the default builder', () {
+    final compactPrompt = activityGenUiSystemPromptBuilder([
+      activityCatalog,
+    ], const GenUiSystemPromptOptions());
+    final defaultPrompt = defaultGenUiSystemPromptBuilder([
+      activityCatalog,
+    ], const GenUiSystemPromptOptions());
+
+    expect(compactPrompt.length, lessThan(defaultPrompt.length * 0.75));
+  });
+
+  test('activity GenUI prompt contains minimal A2UI shape guidance', () {
+    final prompt = activityGenUiSystemPromptBuilder([
+      activityCatalog,
+    ], const GenUiSystemPromptOptions());
+
+    expect(prompt, contains('"createSurface"'));
+    expect(prompt, contains('"updateComponents"'));
+    expect(prompt, contains('"version":"v0.9"'));
+    expect(prompt, contains('"component":"ItineraryPlan"'));
+    expect(prompt, contains('children as component id strings'));
   });
 
   test('fromEnvironment parses overrides', () {
@@ -20,6 +64,15 @@ void main() {
       'LLAMADART_GENUI_CACHE_POLICY': 'refresh',
       'LLAMADART_GENUI_MODEL_NAME': 'custom-genui',
       'LLAMADART_GENUI_CONTEXT_SIZE': '16384',
+      'LLAMADART_GENUI_GPU_BACKEND': 'cpu',
+      'LLAMADART_GENUI_GPU_LAYERS': '0',
+      'LLAMADART_GENUI_THREADS': '4',
+      'LLAMADART_GENUI_THREADS_BATCH': '4',
+      'LLAMADART_GENUI_BATCH_SIZE': '256',
+      'LLAMADART_GENUI_MICRO_BATCH_SIZE': '128',
+      'LLAMADART_GENUI_FLASH_ATTENTION': 'disabled',
+      'LLAMADART_GENUI_CACHE_TYPE_K': 'q8_0',
+      'LLAMADART_GENUI_CACHE_TYPE_V': 'q8_0',
       'LLAMADART_GENUI_MAX_TOKENS': '1024',
       'LLAMADART_GENUI_TEMPERATURE': '0.1',
       'LLAMADART_GENUI_ENABLE_THINKING': 'true',
@@ -31,6 +84,18 @@ void main() {
     expect(config.cachePolicy, llama.ModelCachePolicy.refresh);
     expect(config.modelName, 'custom-genui');
     expect(config.contextSize, 16384);
+    expect(config.inferenceOptions.preferredBackend, llama.GpuBackend.cpu);
+    expect(config.inferenceOptions.gpuLayers, 0);
+    expect(config.inferenceOptions.numberOfThreads, 4);
+    expect(config.inferenceOptions.numberOfThreadsBatch, 4);
+    expect(config.inferenceOptions.batchSize, 256);
+    expect(config.inferenceOptions.microBatchSize, 128);
+    expect(
+      config.inferenceOptions.flashAttention,
+      llama.FlashAttention.disabled,
+    );
+    expect(config.inferenceOptions.cacheTypeK, llama.KvCacheType.q8_0);
+    expect(config.inferenceOptions.cacheTypeV, llama.KvCacheType.q8_0);
     expect(config.maxTokens, 1024);
     expect(config.temperature, 0.1);
     expect(config.enableThinking, isTrue);

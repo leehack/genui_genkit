@@ -129,6 +129,98 @@ void main() {
   );
 
   test(
+    'session renders updateComponents-only output with an unclosed fence',
+    () async {
+      final catalog = BasicCatalogItems.asCatalog();
+      final session = GenkitGenUiSession(
+        backend: LocalGenkitBackend(
+          generate: (_) => Stream<String>.value('''
+```json
+{
+  "version": "v0.9",
+  "updateComponents": {
+    "surfaceId": "s1",
+    "components": [
+      {
+        "id": "root",
+        "component": "Text",
+        "text": "hello"
+      }
+    ]
+  }
+}
+'''),
+        ),
+        catalog: catalog,
+      );
+
+      await session.sendText('go');
+      await _waitForSurface(session, 's1');
+
+      expect(
+        session.messages.any((message) => message.surfaceId == 's1'),
+        isTrue,
+      );
+      expect(
+        session.messages
+            .map((message) => message.text)
+            .whereType<String>()
+            .any((text) => text.contains('updateComponents')),
+        isFalse,
+      );
+      session.dispose();
+    },
+  );
+
+  test(
+    'session repairs combined A2UI messages and missing root component',
+    () async {
+      final catalog = BasicCatalogItems.asCatalog();
+      final session = GenkitGenUiSession(
+        backend: LocalGenkitBackend(
+          generate: (_) => Stream<String>.value('''
+```json
+{
+  "createSurface": {
+    "surfaceId": "s1",
+    "catalogId": "${catalog.catalogId}"
+  },
+  "updateComponents": {
+    "surfaceId": "s1",
+    "components": [
+      {
+        "id": "message",
+        "component": "Text",
+        "text": "hello"
+      }
+    ]
+  }
+}
+```
+'''),
+        ),
+        catalog: catalog,
+      );
+
+      await session.sendText('go');
+      await _waitForSurface(session, 's1');
+
+      expect(
+        session.messages.any((message) => message.surfaceId == 's1'),
+        isTrue,
+      );
+      expect(
+        session.messages
+            .map((message) => message.text)
+            .whereType<String>()
+            .any((text) => text.contains('createSurface')),
+        isFalse,
+      );
+      session.dispose();
+    },
+  );
+
+  test(
     'session preserves whitespace-only chunks in visible assistant text',
     () async {
       final session = GenkitGenUiSession(

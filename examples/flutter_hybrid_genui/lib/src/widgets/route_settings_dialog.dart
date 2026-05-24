@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:llamadart/llamadart.dart' as llama;
 
 import '../model_config.dart';
 import '../runtime/app_runtime.dart';
@@ -215,10 +216,101 @@ class _BackendSettingsDialogState extends State<_BackendSettingsDialog> {
   }
 }
 
-class _LocalSettingsDialog extends StatelessWidget {
+class _LocalSettingsDialog extends StatefulWidget {
   const _LocalSettingsDialog({required this.runtime});
 
   final AppRuntime runtime;
+
+  @override
+  State<_LocalSettingsDialog> createState() => _LocalSettingsDialogState();
+}
+
+class _LocalSettingsDialogState extends State<_LocalSettingsDialog> {
+  late final _modelSourceController = TextEditingController(
+    text: widget.runtime.localModelConfig.value.modelSource.metadataSourceKey,
+  );
+  late final _contextSizeController = TextEditingController(
+    text: widget.runtime.localModelConfig.value.inferenceOptions.contextSize
+        .toString(),
+  );
+  late final _gpuLayersController = TextEditingController(
+    text: widget.runtime.localModelConfig.value.inferenceOptions.gpuLayers
+        .toString(),
+  );
+  late final _batchSizeController = TextEditingController(
+    text: widget.runtime.localModelConfig.value.inferenceOptions.batchSize
+        .toString(),
+  );
+  late final _microBatchSizeController = TextEditingController(
+    text: widget.runtime.localModelConfig.value.inferenceOptions.microBatchSize
+        .toString(),
+  );
+  late final _temperatureController = TextEditingController(
+    text: widget.runtime.localModelConfig.value.temperature.toString(),
+  );
+  late final _maxTokensController = TextEditingController(
+    text: widget.runtime.localModelConfig.value.maxTokens.toString(),
+  );
+  late llama.GpuBackend _preferredBackend =
+      widget.runtime.localModelConfig.value.inferenceOptions.preferredBackend;
+  String? _errorText;
+
+  @override
+  void dispose() {
+    _modelSourceController.dispose();
+    _contextSizeController.dispose();
+    _gpuLayersController.dispose();
+    _batchSizeController.dispose();
+    _microBatchSizeController.dispose();
+    _temperatureController.dispose();
+    _maxTokensController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final current = widget.runtime.localModelConfig.value;
+    final sourceText = _modelSourceController.text.trim();
+    final contextSize = int.tryParse(_contextSizeController.text.trim());
+    final gpuLayers = int.tryParse(_gpuLayersController.text.trim());
+    final batchSize = int.tryParse(_batchSizeController.text.trim());
+    final microBatchSize = int.tryParse(_microBatchSizeController.text.trim());
+    final temperature = double.tryParse(_temperatureController.text.trim());
+    final maxTokens = int.tryParse(_maxTokensController.text.trim());
+
+    if (sourceText.isEmpty ||
+        contextSize == null ||
+        gpuLayers == null ||
+        batchSize == null ||
+        microBatchSize == null ||
+        temperature == null ||
+        maxTokens == null) {
+      setState(() => _errorText = 'Check the model and numeric values.');
+      return;
+    }
+
+    late final llama.ModelSource source;
+    try {
+      source = llama.ModelSource.parse(sourceText);
+    } catch (error) {
+      setState(() => _errorText = 'Invalid model source: $error');
+      return;
+    }
+
+    widget.runtime.localModelConfig.value = current.copyWith(
+      modelSource: source,
+      modelSourceDisplayName: source.displayName,
+      inferenceOptions: current.inferenceOptions.copyWith(
+        contextSize: contextSize,
+        gpuLayers: gpuLayers,
+        preferredBackend: _preferredBackend,
+        batchSize: batchSize,
+        microBatchSize: microBatchSize,
+      ),
+      temperature: temperature,
+      maxTokens: maxTokens,
+    );
+    Navigator.of(context).pop();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -226,20 +318,141 @@ class _LocalSettingsDialog extends StatelessWidget {
       title: const Text('Local settings'),
       content: SizedBox(
         width: 460,
-        child: TextFormField(
-          initialValue: runtime.config.localModel.modelSource.metadataSourceKey,
-          readOnly: true,
-          decoration: const InputDecoration(
-            labelText: 'Model source',
-            prefixIcon: Icon(Icons.memory),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _modelSourceController,
+                decoration: const InputDecoration(
+                  labelText: 'Model source',
+                  prefixIcon: Icon(Icons.memory),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SegmentedButton<llama.GpuBackend>(
+                  selected: {_preferredBackend},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (selection) {
+                    setState(() => _preferredBackend = selection.single);
+                  },
+                  segments: const [
+                    ButtonSegment<llama.GpuBackend>(
+                      value: llama.GpuBackend.auto,
+                      icon: Icon(Icons.auto_mode, size: 18),
+                      label: Text('Auto'),
+                    ),
+                    ButtonSegment<llama.GpuBackend>(
+                      value: llama.GpuBackend.cpu,
+                      icon: Icon(Icons.memory_outlined, size: 18),
+                      label: Text('CPU'),
+                    ),
+                    ButtonSegment<llama.GpuBackend>(
+                      value: llama.GpuBackend.vulkan,
+                      icon: Icon(Icons.bolt_outlined, size: 18),
+                      label: Text('Vulkan'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _contextSizeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Context',
+                        prefixIcon: Icon(Icons.dashboard_customize_outlined),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _gpuLayersController,
+                      decoration: const InputDecoration(
+                        labelText: 'GPU layers',
+                        prefixIcon: Icon(Icons.layers_outlined),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _batchSizeController,
+                      decoration: const InputDecoration(labelText: 'Batch'),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _microBatchSizeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Microbatch',
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _temperatureController,
+                      decoration: const InputDecoration(
+                        labelText: 'Temperature',
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _maxTokensController,
+                      decoration: const InputDecoration(
+                        labelText: 'Max tokens',
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
+              ),
+              if (_errorText != null) ...[
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    _errorText!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),
       actions: [
-        FilledButton(
+        TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Done'),
+          child: const Text('Cancel'),
         ),
+        FilledButton(onPressed: _save, child: const Text('Save')),
       ],
     );
   }

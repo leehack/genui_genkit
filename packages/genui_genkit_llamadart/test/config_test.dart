@@ -3,6 +3,25 @@ import 'package:genui_genkit_llamadart/genui_genkit_llamadart.dart';
 import 'package:llamadart/llamadart.dart' as llama;
 
 void main() {
+  test('mobile GenUI profile maps to llamadart model params', () {
+    final params = LlamaDartInferenceOptions.mobileGenUi.toModelParams();
+
+    expect(params.contextSize, 4096);
+    expect(params.batchSize, 512);
+    expect(params.microBatchSize, 256);
+    expect(params.preferredBackend, llama.GpuBackend.auto);
+    expect(params.cacheTypeK, llama.KvCacheType.f16);
+    expect(params.cacheTypeV, llama.KvCacheType.f16);
+  });
+
+  test('mobile compact profile keeps the benchmark context size', () {
+    final params = LlamaDartInferenceOptions.mobileCompact.toModelParams();
+
+    expect(params.contextSize, 2048);
+    expect(params.batchSize, 512);
+    expect(params.microBatchSize, 128);
+  });
+
   test('remote model load options keep cache policy and bearer token', () {
     final source = llama.ModelSource.parse('hf://owner/repo/model.gguf');
     final config = LlamaDartGenUiConfig(

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:genui_genkit_llamadart/genui_genkit_llamadart.dart';
 
 import '../model_config.dart';
 import '../runtime/app_runtime.dart';
@@ -23,6 +24,7 @@ class RuntimeStatusCard extends StatelessWidget {
     return AnimatedBuilder(
       animation: Listenable.merge([
         runtime.selectedRoute,
+        runtime.localModelConfig,
         runtime.geminiConfig,
         runtime.backendConfig,
       ]),
@@ -635,6 +637,7 @@ class _StatusIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final icon = switch (status.phase) {
       ModelRuntimePhase.downloading => Icons.downloading,
+      ModelRuntimePhase.loading => Icons.hourglass_top,
       ModelRuntimePhase.failed => Icons.error_outline,
       ModelRuntimePhase.ready => Icons.memory,
       _ => Icons.memory_outlined,
@@ -754,7 +757,7 @@ String _phaseTitle(ModelRuntimeStatus status) {
     ModelRuntimePhase.checkingCache => 'Checking cache',
     ModelRuntimePhase.downloading => 'Downloading ${status.assetLabel}',
     ModelRuntimePhase.verifying => 'Verifying ${status.assetLabel}',
-    ModelRuntimePhase.loading => 'Loading llamadart',
+    ModelRuntimePhase.loading => 'Loading local model',
     ModelRuntimePhase.ready => 'Local model ready',
     ModelRuntimePhase.failed => 'Model setup failed',
     ModelRuntimePhase.cancelled => 'Model setup cancelled',
@@ -763,6 +766,14 @@ String _phaseTitle(ModelRuntimeStatus status) {
 
 String _statusDetail(ModelRuntimeStatus status) {
   final resolvedPath = status.resolvedModelPath;
+  if (status.phase == ModelRuntimePhase.loading) {
+    final inference = status.config.inferenceOptions;
+    final backend = inference.preferredBackend.name;
+    final batch = '${inference.batchSize}/${inference.microBatchSize}';
+    final path = resolvedPath == null ? null : _shortPath(resolvedPath);
+    final prefix = path ?? 'Model file ready';
+    return '$prefix · $backend · ctx ${inference.contextSize} · batch $batch';
+  }
   if (status.phase == ModelRuntimePhase.ready && resolvedPath != null) {
     return _shortPath(resolvedPath);
   }
@@ -784,6 +795,16 @@ String _cachePolicyLabel(String value) {
       .toLowerCase();
 }
 
+String _inferenceBackendLabel(LlamaDartInferenceOptions inference) {
+  final gpuLayers = inference.gpuLayers;
+  final layerLabel = gpuLayers >= 999
+      ? 'all layers'
+      : gpuLayers <= 0
+      ? 'CPU layers'
+      : '$gpuLayers layers';
+  return '${inference.preferredBackend.name} / $layerLabel';
+}
+
 String _shortPath(String value) {
   if (value.length <= 52) return value;
   return '...${value.substring(value.length - 49)}';
@@ -800,7 +821,9 @@ IconData _routeIcon(GenUiAiRoute route) {
 String _routeDetail(AppRuntime runtime, GenUiAiRoute route) {
   return switch (route) {
     GenUiAiRoute.local =>
-      'On-device llamadart using ${runtime.config.localModel.modelSourceDisplayName}',
+      'On-device llamadart using '
+          '${runtime.localModelConfig.value.modelSourceDisplayName} · '
+          '${_inferenceBackendLabel(runtime.localModelConfig.value.inferenceOptions)}',
     GenUiAiRoute.gemini =>
       'Direct Genkit Gemini provider using ${runtime.geminiConfig.value.modelName}',
     GenUiAiRoute.backend =>
@@ -816,7 +839,7 @@ String _compactRouteDetail(
   return switch (route) {
     GenUiAiRoute.local =>
       status == null
-          ? runtime.config.localModel.modelSourceDisplayName
+          ? runtime.localModelConfig.value.modelSourceDisplayName
           : _compactLocalStatus(status),
     GenUiAiRoute.gemini =>
       runtime.geminiConfig.value.hasApiKey
@@ -841,5 +864,5 @@ String _compactLocalStatus(ModelRuntimeStatus status) {
 VoidCallback? _prepareModel(AppRuntime runtime) {
   final prepareModel = runtime.prepareModel;
   if (prepareModel == null) return null;
-  return () => unawaited(prepareModel());
+  return () => unawaited(prepareModel().catchError((Object _) {}));
 }

@@ -37,11 +37,18 @@ final backend = LlamaDartGenUiBackend(
     cachePolicy: llama.ModelCachePolicy.preferCached,
   ),
 );
+final systemPromptUsedByYourSession = '...';
 
-await backend.prepare();
+await backend.prepare(warmUpSystemPrompt: systemPromptUsedByYourSession);
 ```
 
-Use `backend.snapshots` to show download/cache progress in a Flutter UI.
+Use `backend.snapshots` to show download/cache progress in a Flutter UI. Keep a
+separate indeterminate "loading model" state while `prepare()` is still pending;
+`prepare()` resolves the file and performs a warm-up request so the first real
+user turn does not hide model loading behind chat latency. Pass the same compact
+system prompt your session will use when you want llamadart prompt-prefix reuse
+to reduce the first turn's time to first token. If no prompt is supplied,
+`prepare()` falls back to a tiny one-token warm-up.
 
 ## Model Sources
 
@@ -65,7 +72,17 @@ paths are passed through without remote-only options such as bearer tokens.
 - optional SHA-256 verification
 - bearer tokens for private or rate-limited downloads
 - Genkit model name
-- context size, temperature, max tokens, and thinking mode
+- load-time inference options such as context size, GPU backend/layers, thread
+  counts, batch sizes, flash attention, and KV cache type
+- generation options such as temperature, max tokens, and thinking mode
+
+The default local GenUI profile uses `contextSize: 4096`, `batchSize: 512`,
+`microBatchSize: 256`, `maxTokens: 512`, and automatic backend/thread
+selection. This keeps enough context for compact A2UI prompts while matching
+the fastest stable Pixel 9 Pro Gemma 4 E2B profile measured in the example
+benchmark. Pair it with `compactGenUiSystemPromptBuilder` for mobile/on-device
+apps; use `LlamaDartInferenceOptions.mobileCompact` only for shorter prompts or
+benchmarks.
 
 ## Local Dependency Development
 

@@ -137,15 +137,22 @@ final class GenkitBackend<CustomOptions> implements GenUiBackend {
         interruptRestart: options.interruptRestart,
       );
 
+      var emittedText = false;
       await for (final chunk in stream) {
         final text = chunkMapper(chunk);
         if (text != null && text.isNotEmpty) {
+          emittedText = true;
           yield GenUiTextChunk(text);
         }
       }
-      yield GenUiTurnDone(
-        metadata: resultMetadataMapper(await stream.onResult),
-      );
+      final result = await stream.onResult;
+      if (!emittedText) {
+        final finalText = result.text;
+        if (finalText.isNotEmpty) {
+          yield GenUiTextChunk(finalText);
+        }
+      }
+      yield GenUiTurnDone(metadata: resultMetadataMapper(result));
     } catch (error, stackTrace) {
       yield GenUiBackendError(
         error.toString(),

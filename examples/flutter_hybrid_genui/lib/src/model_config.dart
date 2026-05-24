@@ -1,3 +1,4 @@
+import 'package:genui_genkit_llamadart/genui_genkit_llamadart.dart';
 import 'package:llamadart/llamadart.dart' as llama;
 import 'package:path/path.dart' as p;
 
@@ -132,9 +133,9 @@ final class ModelConfig {
     this.bearerToken,
     this.cachePolicy = llama.ModelCachePolicy.preferCached,
     this.modelName = 'local-genui',
-    this.contextSize = 8192,
-    this.temperature = 0.2,
-    this.maxTokens = 2048,
+    this.inferenceOptions = LlamaDartInferenceOptions.mobileGenUi,
+    this.temperature = 0,
+    this.maxTokens = 512,
     this.enableThinking = false,
   });
 
@@ -147,10 +148,44 @@ final class ModelConfig {
   final String? bearerToken;
   final llama.ModelCachePolicy cachePolicy;
   final String modelName;
-  final int contextSize;
+  final LlamaDartInferenceOptions inferenceOptions;
+  int get contextSize => inferenceOptions.contextSize;
   final double temperature;
   final int maxTokens;
   final bool enableThinking;
+
+  ModelConfig copyWith({
+    llama.ModelSource? modelSource,
+    llama.ModelSource? mmprojSource,
+    String? modelSourceDisplayName,
+    String? cacheDirectory,
+    String? modelSha256,
+    String? mmprojSha256,
+    String? bearerToken,
+    llama.ModelCachePolicy? cachePolicy,
+    String? modelName,
+    LlamaDartInferenceOptions? inferenceOptions,
+    double? temperature,
+    int? maxTokens,
+    bool? enableThinking,
+  }) {
+    return ModelConfig(
+      modelSource: modelSource ?? this.modelSource,
+      mmprojSource: mmprojSource ?? this.mmprojSource,
+      modelSourceDisplayName:
+          modelSourceDisplayName ?? this.modelSourceDisplayName,
+      cacheDirectory: cacheDirectory ?? this.cacheDirectory,
+      modelSha256: modelSha256 ?? this.modelSha256,
+      mmprojSha256: mmprojSha256 ?? this.mmprojSha256,
+      bearerToken: bearerToken ?? this.bearerToken,
+      cachePolicy: cachePolicy ?? this.cachePolicy,
+      modelName: modelName ?? this.modelName,
+      inferenceOptions: inferenceOptions ?? this.inferenceOptions,
+      temperature: temperature ?? this.temperature,
+      maxTokens: maxTokens ?? this.maxTokens,
+      enableThinking: enableThinking ?? this.enableThinking,
+    );
+  }
 
   static ModelConfig fromEnvironment(Map<String, String> environment) {
     final legacyModelPath = _emptyToNull(environment['LLAMADART_MODEL_PATH']);
@@ -191,17 +226,55 @@ final class ModelConfig {
       modelName:
           _emptyToNull(environment['LLAMADART_GENUI_MODEL_NAME']) ??
           'local-genui',
-      contextSize: _parseInt(
-        environment['LLAMADART_GENUI_CONTEXT_SIZE'],
-        fallback: 8192,
+      inferenceOptions: LlamaDartInferenceOptions(
+        contextSize: _parseInt(
+          environment['LLAMADART_GENUI_CONTEXT_SIZE'],
+          fallback: LlamaDartInferenceOptions.mobileGenUi.contextSize,
+        ),
+        gpuLayers: _parseInt(
+          environment['LLAMADART_GENUI_GPU_LAYERS'],
+          fallback: LlamaDartInferenceOptions.mobileGenUi.gpuLayers,
+        ),
+        preferredBackend: _parseGpuBackend(
+          environment['LLAMADART_GENUI_GPU_BACKEND'],
+          fallback: LlamaDartInferenceOptions.mobileGenUi.preferredBackend,
+        ),
+        numberOfThreads: _parseInt(
+          environment['LLAMADART_GENUI_THREADS'],
+          fallback: LlamaDartInferenceOptions.mobileGenUi.numberOfThreads,
+        ),
+        numberOfThreadsBatch: _parseInt(
+          environment['LLAMADART_GENUI_THREADS_BATCH'],
+          fallback: LlamaDartInferenceOptions.mobileGenUi.numberOfThreadsBatch,
+        ),
+        batchSize: _parseInt(
+          environment['LLAMADART_GENUI_BATCH_SIZE'],
+          fallback: LlamaDartInferenceOptions.mobileGenUi.batchSize,
+        ),
+        microBatchSize: _parseInt(
+          environment['LLAMADART_GENUI_MICRO_BATCH_SIZE'],
+          fallback: LlamaDartInferenceOptions.mobileGenUi.microBatchSize,
+        ),
+        flashAttention: _parseFlashAttention(
+          environment['LLAMADART_GENUI_FLASH_ATTENTION'],
+          fallback: LlamaDartInferenceOptions.mobileGenUi.flashAttention,
+        ),
+        cacheTypeK: _parseKvCacheType(
+          environment['LLAMADART_GENUI_CACHE_TYPE_K'],
+          fallback: LlamaDartInferenceOptions.mobileGenUi.cacheTypeK,
+        ),
+        cacheTypeV: _parseKvCacheType(
+          environment['LLAMADART_GENUI_CACHE_TYPE_V'],
+          fallback: LlamaDartInferenceOptions.mobileGenUi.cacheTypeV,
+        ),
       ),
       maxTokens: _parseInt(
         environment['LLAMADART_GENUI_MAX_TOKENS'],
-        fallback: 2048,
+        fallback: 512,
       ),
       temperature: _parseDouble(
         environment['LLAMADART_GENUI_TEMPERATURE'],
-        fallback: 0.2,
+        fallback: 0,
       ),
       enableThinking: _parseBool(
         environment['LLAMADART_GENUI_ENABLE_THINKING'],
@@ -292,5 +365,61 @@ final class ModelConfig {
       'nocache' || 'no_cache' || 'no-cache' => llama.ModelCachePolicy.noCache,
       _ => throw FormatException('Invalid cache policy: $value'),
     };
+  }
+
+  static llama.GpuBackend _parseGpuBackend(
+    String? value, {
+    required llama.GpuBackend fallback,
+  }) {
+    final normalized = _normalizeToken(value);
+    if (normalized == null) return fallback;
+    return switch (normalized) {
+      'auto' => llama.GpuBackend.auto,
+      'cpu' => llama.GpuBackend.cpu,
+      'vulkan' => llama.GpuBackend.vulkan,
+      'metal' => llama.GpuBackend.metal,
+      'cuda' => llama.GpuBackend.cuda,
+      'blas' => llama.GpuBackend.blas,
+      'opencl' => llama.GpuBackend.opencl,
+      'hip' => llama.GpuBackend.hip,
+      _ => throw FormatException('Invalid GPU backend: $value'),
+    };
+  }
+
+  static llama.FlashAttention _parseFlashAttention(
+    String? value, {
+    required llama.FlashAttention fallback,
+  }) {
+    final normalized = _normalizeToken(value);
+    if (normalized == null) return fallback;
+    return switch (normalized) {
+      'auto' => llama.FlashAttention.auto,
+      'enabled' || 'enable' || 'on' || 'true' => llama.FlashAttention.enabled,
+      'disabled' ||
+      'disable' ||
+      'off' ||
+      'false' => llama.FlashAttention.disabled,
+      _ => throw FormatException('Invalid flash attention value: $value'),
+    };
+  }
+
+  static llama.KvCacheType _parseKvCacheType(
+    String? value, {
+    required llama.KvCacheType fallback,
+  }) {
+    final normalized = _normalizeToken(value);
+    if (normalized == null) return fallback;
+    return switch (normalized) {
+      'f16' || 'fp16' => llama.KvCacheType.f16,
+      'q8_0' || 'q80' || 'q8' => llama.KvCacheType.q8_0,
+      'q4_0' || 'q40' || 'q4' => llama.KvCacheType.q4_0,
+      _ => throw FormatException('Invalid KV cache type: $value'),
+    };
+  }
+
+  static String? _normalizeToken(String? value) {
+    final trimmed = _emptyToNull(value);
+    if (trimmed == null) return null;
+    return trimmed.toLowerCase().replaceAll('-', '_');
   }
 }
