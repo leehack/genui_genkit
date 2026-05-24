@@ -182,12 +182,16 @@ class _GenUiDemoScreenState extends State<GenUiDemoScreen> {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1380),
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(
+                      MediaQuery.sizeOf(context).width < 640 ? 10 : 16,
+                    ),
                     child: LayoutBuilder(
                       builder: (context, constraints) {
                         final showSidePanel = constraints.maxWidth >= 1280;
+                        final compactLayout = constraints.maxWidth < 700;
                         final content = _MainContent(
                           runtime: widget.runtime,
+                          compactLayout: compactLayout,
                           lastError: _lastError,
                           onDismissError: () =>
                               setState(() => _lastError = null),
@@ -252,6 +256,7 @@ final class _RawTextBuffer extends ChangeNotifier
 class _MainContent extends StatelessWidget {
   const _MainContent({
     required this.runtime,
+    required this.compactLayout,
     required this.lastError,
     required this.onDismissError,
     required this.onClear,
@@ -264,6 +269,7 @@ class _MainContent extends StatelessWidget {
   });
 
   final AppRuntime runtime;
+  final bool compactLayout;
   final Object? lastError;
   final VoidCallback onDismissError;
   final VoidCallback onClear;
@@ -281,23 +287,29 @@ class _MainContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _HeroHeader(
+          compact: compactLayout,
           isProcessing: session.isProcessing,
           onClear: onClear,
           onShowRaw: onShowRaw,
           onShowCatalog: onShowCatalog,
         ),
-        const SizedBox(height: 8),
-        RuntimeStatusCard(runtime: runtime, isProcessing: session.isProcessing),
-        const SizedBox(height: 8),
+        SizedBox(height: compactLayout ? 6 : 8),
+        RuntimeStatusCard(
+          runtime: runtime,
+          isProcessing: session.isProcessing,
+          compact: compactLayout,
+        ),
+        SizedBox(height: compactLayout ? 6 : 8),
         PromptSuggestionBar(
           isProcessing: session.isProcessing,
+          compact: compactLayout,
           onPromptSelected: onSend,
         ),
         if (lastError != null) ...[
-          const SizedBox(height: 8),
+          SizedBox(height: compactLayout ? 6 : 8),
           _ErrorBanner(error: lastError!, onDismiss: onDismissError),
         ],
-        const SizedBox(height: 8),
+        SizedBox(height: compactLayout ? 6 : 8),
         Expanded(
           child: ConversationPane(
             controller: scrollController,
@@ -307,7 +319,7 @@ class _MainContent extends StatelessWidget {
             surfaceKeys: surfaceKeys,
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: compactLayout ? 6 : 8),
         PromptComposer(
           controller: controller,
           isProcessing: session.isProcessing,
@@ -339,12 +351,14 @@ class _SidePanel extends StatelessWidget {
 
 class _HeroHeader extends StatelessWidget {
   const _HeroHeader({
+    required this.compact,
     required this.isProcessing,
     required this.onClear,
     required this.onShowRaw,
     required this.onShowCatalog,
   });
 
+  final bool compact;
   final bool isProcessing;
   final VoidCallback onClear;
   final VoidCallback onShowRaw;
@@ -356,8 +370,8 @@ class _HeroHeader extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 42,
-          height: 42,
+          width: compact ? 34 : 42,
+          height: compact ? 34 : 42,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.primary,
             borderRadius: BorderRadius.circular(8),
@@ -374,17 +388,21 @@ class _HeroHeader extends StatelessWidget {
             children: [
               Text(
                 'Hybrid GenUI Workbench',
-                style: textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style:
+                    (compact ? textTheme.titleLarge : textTheme.headlineSmall)
+                        ?.copyWith(fontWeight: FontWeight.w700),
               ),
-              const SizedBox(height: 2),
-              Text(
-                'Route each turn to llamadart, Gemini, or a Genkit backend.',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+              if (!compact) ...[
+                const SizedBox(height: 2),
+                Text(
+                  'Route each turn to llamadart, Gemini, or a Genkit backend.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -394,12 +412,14 @@ class _HeroHeader extends StatelessWidget {
           icon: Icons.widgets_outlined,
           onPressed: onShowCatalog,
         ),
-        const SizedBox(width: 6),
-        _HeaderToolButton(
-          tooltip: 'Raw stream',
-          icon: Icons.data_object,
-          onPressed: onShowRaw,
-        ),
+        if (!compact) ...[
+          const SizedBox(width: 6),
+          _HeaderToolButton(
+            tooltip: 'Raw stream',
+            icon: Icons.data_object,
+            onPressed: onShowRaw,
+          ),
+        ],
         const SizedBox(width: 6),
         _HeaderToolButton(
           tooltip: 'New run',

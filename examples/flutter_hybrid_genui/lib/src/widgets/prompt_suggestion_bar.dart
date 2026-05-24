@@ -44,13 +44,36 @@ class PromptSuggestionBar extends StatelessWidget {
     super.key,
     required this.isProcessing,
     required this.onPromptSelected,
+    this.compact = false,
   });
 
   final bool isProcessing;
   final ValueChanged<String> onPromptSelected;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return SizedBox(
+        height: 40,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: promptSuggestions.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 8),
+          itemBuilder: (context, index) {
+            final suggestion = promptSuggestions[index];
+            return ActionChip(
+              avatar: Icon(suggestion.icon, size: 18),
+              label: Text(suggestion.label),
+              onPressed: isProcessing
+                  ? null
+                  : () => onPromptSelected(suggestion.prompt),
+            );
+          },
+        ),
+      );
+    }
+
     return Wrap(
       spacing: 8,
       runSpacing: 8,

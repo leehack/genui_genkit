@@ -41,6 +41,34 @@ void main() {
     expect(find.text('Gemini key missing'), findsOneWidget);
   });
 
+  testWidgets('mobile layout keeps AI config compact', (tester) async {
+    tester.view.physicalSize = const Size(390, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final runtime = AppRuntime.fromEnvironment(const {'HOME': '/Users/test'});
+    addTearDown(runtime.dispose);
+
+    await tester.pumpWidget(FlutterHybridGenUiApp(runtime: runtime));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Active AI route'), findsNothing);
+    expect(find.text('Local route'), findsOneWidget);
+    expect(find.byTooltip('AI route'), findsOneWidget);
+    expect(find.byTooltip('Route settings'), findsOneWidget);
+    expect(find.text('Local model queued'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('AI route'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Gemini').last);
+    await tester.pumpAndSettle();
+
+    expect(runtime.selectedRoute.value, GenUiAiRoute.gemini);
+    expect(find.text('Gemini route'), findsOneWidget);
+    expect(find.text('API key missing'), findsOneWidget);
+  });
+
   testWidgets('Gemini and backend settings can be edited in the UI', (
     tester,
   ) async {
