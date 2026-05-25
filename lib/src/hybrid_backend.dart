@@ -14,6 +14,9 @@ typedef GenUiRoutePolicy =
 /// This is useful for hybrid apps where private/offline tasks use an on-device
 /// backend and larger or network-only tasks use a remote backend.
 final class HybridGenUiBackend implements GenUiBackend {
+  /// Creates a router over named backend [routes].
+  ///
+  /// The [policy] is called for each turn and must return one of the route keys.
   HybridGenUiBackend({
     required Map<String, GenUiBackend> routes,
     required GenUiRoutePolicy policy,
@@ -29,6 +32,7 @@ final class HybridGenUiBackend implements GenUiBackend {
   GenUiBackend? _activeBackend;
   var _disposed = false;
 
+  /// Named backend routes available to the policy.
   Map<String, GenUiBackend> get routes => _routes;
 
   @override

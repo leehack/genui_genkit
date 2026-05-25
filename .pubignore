@@ -10,3 +10,6 @@ build/
 
 # The iOS scaffold is not part of the committed example surface yet.
 example/flutter_hybrid_genui/ios/
+
+# Internal agent workflow instructions are not part of the public package.
+AGENTS.md

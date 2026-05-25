@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0-dev
+## 0.1.0
 
 - Initial experimental workspace for GenUI + Genkit integration.
 - Added Flutter session/client package with Genkit, remote Genkit flow, custom SSE, and hybrid backends.

@@ -13,6 +13,7 @@ import 'backend.dart';
 /// [cancelActiveTurn] to abort the active request. If [client] is supplied, the
 /// caller owns its lifecycle and cancellation cannot forcibly close it.
 final class RemoteGenUiBackend implements GenUiBackend {
+  /// Creates a backend for a custom HTTP/SSE endpoint.
   RemoteGenUiBackend({
     required Uri endpoint,
     http.Client? client,

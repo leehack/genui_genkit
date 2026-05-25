@@ -12,6 +12,7 @@ import 'backend.dart';
 /// the stream chunks are plain text, and the final flow result is exposed as
 /// [GenUiTurnDone.metadata].
 final class RemoteGenkitFlowBackend implements GenUiBackend {
+  /// Creates a backend for a remote Genkit flow action.
   RemoteGenkitFlowBackend({
     required Uri flowUrl,
     Map<String, String> headers = const {},

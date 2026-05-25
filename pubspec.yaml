@@ -1,9 +1,9 @@
 name: genui_genkit
 description: Build Flutter GenUI sessions backed by Genkit models, remote Genkit flows, and hybrid local/remote AI routes.
-version: 0.1.0-dev
+version: 0.1.0
 repository: https://github.com/leehack/genui_genkit
 issue_tracker: https://github.com/leehack/genui_genkit/issues
-documentation: https://github.com/leehack/genui_genkit#readme
+documentation: https://github.com/leehack/genui_genkit/blob/main/doc/architecture.md
 
 topics:
   - ai
