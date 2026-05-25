@@ -3,8 +3,9 @@
 .packages
 .pub-cache/
 pubspec.lock
-!examples/flutter_hybrid_genui/pubspec.lock
-!examples/genui_backend_server/pubspec.lock
+!example/flutter_hybrid_genui/pubspec.lock
+!example/genui_backend_server/pubspec.lock
+pubspec_overrides.yaml
 build/
 .flutter-plugins
 .flutter-plugins-dependencies
@@ -24,3 +25,6 @@ firebase-debug.log
 **/.dart_tool/
 **/build/
 **/genui_benchmarks/
+
+# Generated locally when experimenting with additional Flutter targets.
+example/flutter_hybrid_genui/ios/

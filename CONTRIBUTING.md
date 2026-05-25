@@ -9,9 +9,9 @@ easy to reason about.
   such as `GenUiBackend`, and extend behavior through composition.
 - **KISS by default**: prefer small adapters and explicit data objects over
   framework-heavy abstractions.
-- Keep `packages/genui_genkit` provider-neutral.
-- Keep llamadart-specific setup in `packages/genui_genkit_llamadart` or an
-  example route.
+- Keep the root `genui_genkit` package provider-neutral.
+- Keep llamadart-specific setup in `genkit_llamadart`, backend examples, or
+  app/example routes. Do not add provider-specific code to the core package.
 - Use Genkit's official server integrations, such as `genkit_shelf`, before
   adding custom server infrastructure.
 - Remove dead demos, fake runtime paths, and unused config fields when they no
@@ -21,13 +21,12 @@ easy to reason about.
 
 When public behavior changes, update the relevant docs in the same change:
 
-- root `README.md` for the overall project story
-- package READMEs for pub.dev-facing usage
-- `docs/architecture.md` for architecture or mode changes
+- root `README.md` for the pub.dev-facing project story
+- `doc/architecture.md` for architecture or mode changes
 - example READMEs for runnable commands and environment variables
 - `AGENTS.md` for durable agent workflow rules
 
-Package READMEs should start with a short value proposition, show a visual or
+The root README should start with a short value proposition, show a visual or
 diagram when it helps, and include copyable Dart snippets.
 
 ## Lint Policy
@@ -49,29 +48,22 @@ uncommitted.
 
 ## Test Matrix
 
-Run checks inside each package or example you changed.
+Run checks for the package and each example you changed.
 
 ```sh
-cd packages/genui_genkit
 flutter analyze
 flutter test
 ```
 
 ```sh
-cd packages/genui_genkit_llamadart
-flutter analyze
-flutter test
-```
-
-```sh
-cd examples/flutter_hybrid_genui
+cd example/flutter_hybrid_genui
 flutter analyze
 flutter test
 flutter test integration_test -d macos
 ```
 
 ```sh
-cd examples/genui_backend_server
+cd example/genui_backend_server
 dart analyze
 dart test
 dart run bin/server.dart
@@ -84,9 +76,8 @@ finished unless the user explicitly asks to leave it running.
 
 Before publishing a package:
 
-- remove `publish_to: none`
 - verify `LICENSE`, `README.md`, `CHANGELOG.md`, and `example/`
-- run analysis and tests from the package directory
+- run analysis and tests from the repo root
 - check that the README explains scope and limitations
 - confirm public APIs have enough Dart doc comments for generated docs
 - avoid URLs or badges that cannot be rendered from pub.dev

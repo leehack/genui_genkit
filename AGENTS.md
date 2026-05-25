@@ -14,7 +14,7 @@ primary product goal as:
 - Prefer SOLID and KISS together: keep responsibilities clear, depend on the
   `GenUiBackend` abstraction, and avoid abstractions that do not remove real
   complexity.
-- Keep `packages/genui_genkit` provider-neutral. Do not import Gemini, OpenAI,
+- Keep the root `genui_genkit` package provider-neutral. Do not import Gemini, OpenAI,
   llamadart, or other provider plugins into the core package.
 - Use `GenUiBackend` as the backend boundary. New execution paths should adapt
   to that interface instead of leaking provider details into widgets or session
@@ -28,8 +28,8 @@ primary product goal as:
 - Use `HybridGenUiBackend` for per-turn routing. Route policy can inspect the
   prompt, metadata, privacy mode, network state, feature flags, or UI-selected
   route.
-- Keep `packages/genui_genkit_llamadart` optional. It may depend on
-  `llamadart` and `genkit_llamadart`; the core package should not.
+- Keep llamadart-specific setup in `genkit_llamadart`, backend examples, or
+  app/example routes. The core package should not import provider plugins.
 - For llamadart models, use llamadart's package-managed download/cache APIs.
   Do not require users to pass a local model path for the normal example flow.
 - Flutter renders only local GenUI catalog widgets. Streamed A2UI can reference
@@ -41,10 +41,10 @@ primary product goal as:
 
 ## Examples
 
-`examples/flutter_hybrid_genui` is a useful reference app, not a throwaway demo.
+`example/flutter_hybrid_genui` is a useful reference app, not a throwaway demo.
 Keep it able to run in three routes:
 
-- Local: on-device llamadart through `genui_genkit_llamadart`.
+- Local: on-device llamadart through `genkit_llamadart` and `GenkitBackend`.
 - Gemini: direct Genkit provider execution in the Flutter process.
 - Backend: remote Genkit flow through `RemoteGenkitFlowBackend`.
 
@@ -64,7 +64,7 @@ For this app:
 - Prefer deterministic fake backends only for tests and smoke fixtures, not as
   the main example runtime.
 
-`examples/genui_backend_server` demonstrates backend mode:
+`example/genui_backend_server` demonstrates backend mode:
 
 - Serve Genkit flows through `genkit_shelf`.
 - Use Gemma through llamadart by default.
@@ -80,9 +80,9 @@ clear feature gap that Genkit's official server integration cannot cover.
 - Use hosted package dependencies for packages that are not part of this repo.
 - If local dependency development is needed, use an uncommitted
   `pubspec_overrides.yaml` instead of committing path dependencies.
-- Keep public API docs, package READMEs, example READMEs, and
-  `docs/architecture.md` in sync with behavior changes.
-- Keep package READMEs pub.dev-friendly: start with the value proposition, add
+- Keep public API docs, the root README, example READMEs, and
+  `doc/architecture.md` in sync with behavior changes.
+- Keep the root README pub.dev-friendly: start with the value proposition, add
   a visual explanation when useful, and include a copyable minimal example.
 
 ## Lint Rules
@@ -96,21 +96,12 @@ clear feature gap that Genkit's official server integration cannot cover.
 
 ## Testing Workflow
 
-There is no root Dart workspace command. Run checks inside the package or
-example you changed.
+This is a single root package plus standalone examples. Run checks for the
+package or example you changed.
 
 Core package:
 
 ```sh
-cd packages/genui_genkit
-flutter analyze
-flutter test
-```
-
-Llamadart integration:
-
-```sh
-cd packages/genui_genkit_llamadart
 flutter analyze
 flutter test
 ```
@@ -118,16 +109,21 @@ flutter test
 Flutter hybrid example:
 
 ```sh
-cd examples/flutter_hybrid_genui
+cd example/flutter_hybrid_genui
 flutter analyze
 flutter test
 flutter test integration_test -d macos
 ```
 
+Keep opt-in local model benchmarks out of the default `integration_test`
+directory. Flutter launches every `.dart` target in that directory even when a
+test is skipped, so heavy benchmarks should live under `test/` and be run by
+explicit file path with their opt-in `--dart-define` flag.
+
 Backend server example:
 
 ```sh
-cd examples/genui_backend_server
+cd example/genui_backend_server
 dart analyze
 dart test
 dart run bin/server.dart
