@@ -37,13 +37,14 @@ Flutter GenUI catalog renderer
 The model can only reference widgets that the app registered in its local
 catalog. It cannot execute arbitrary Flutter code.
 
-## Packages
+## Project Layout
 
-- `packages/genui_genkit` - Flutter session and backend adapters for Genkit,
+- `lib/` - provider-neutral Flutter session and backend adapters for Genkit,
   remote Genkit flows, custom SSE backends, and hybrid routing.
-- `packages/genui_genkit_llamadart` - optional on-device helper that resolves
-  GGUF model sources through llamadart's download/cache manager, then registers
-  the cached model with `genkit_llamadart`.
+- `example/` - minimal package example for pub.dev.
+- `example/flutter_hybrid_genui` - product-like Flutter app with Local,
+  Gemini, and Backend routes.
+- `example/genui_backend_server` - backend-mode Genkit server example.
 
 ## Execution Modes
 
@@ -70,18 +71,26 @@ final session = GenkitGenUiSession(
 On-device llamadart with package-managed cache/download:
 
 ```dart
-import 'package:genui_genkit_llamadart/genui_genkit_llamadart.dart';
-import 'package:llamadart/llamadart.dart' as llama;
+import 'package:genkit/genkit.dart';
+import 'package:genkit_llamadart/genkit_llamadart.dart';
+import 'package:genui_genkit/genui_genkit.dart';
 
-final backend = LlamaDartGenUiBackend(
-  LlamaDartGenUiConfig(
-    modelSource: llama.ModelSource.parse(
-      'hf://unsloth/gemma-4-E2B-it-GGUF/gemma-4-E2B-it-Q4_K_S.gguf',
-    ),
+final prepared = await llamaDart.prepareModel(
+  name: 'local-genui',
+  source: ModelSource.parse(
+    'hf://unsloth/gemma-4-E2B-it-GGUF/gemma-4-E2B-it-Q4_K_S.gguf',
   ),
 );
+final ai = Genkit(plugins: [prepared.plugin]);
 
-await backend.prepare();
+final session = GenkitGenUiSession(
+  backend: GenkitBackend<LlamaDartGenerationConfig>(
+    ai: ai,
+    model: prepared.modelRef,
+    config: const LlamaDartGenerationConfig(maxTokens: 512),
+  ),
+  catalog: appCatalog,
+);
 ```
 
 Backend mode through a Genkit flow:
@@ -112,15 +121,15 @@ final backend = HybridGenUiBackend(
 
 ## Examples
 
-- `examples/flutter_hybrid_genui` - Flutter desktop workbench with Local,
+- `example/flutter_hybrid_genui` - Flutter desktop workbench with Local,
   Gemini, and Backend routes configurable from the UI.
-- `examples/genui_backend_server` - Dart Genkit backend using `genkit_shelf`
+- `example/genui_backend_server` - Dart Genkit backend using `genkit_shelf`
   and Gemma through llamadart.
 
 Run the Flutter example:
 
 ```sh
-cd examples/flutter_hybrid_genui
+cd example/flutter_hybrid_genui
 flutter pub get
 flutter run -d macos
 ```
@@ -128,13 +137,14 @@ flutter run -d macos
 Run the backend example:
 
 ```sh
-cd examples/genui_backend_server
+cd example/genui_backend_server
 dart run bin/server.dart
 ```
 
 Then point the Flutter app at it:
 
 ```sh
+cd ../flutter_hybrid_genui
 GENUI_AI_ROUTE=backend \
 GENUI_BACKEND_URL=http://localhost:8080/genui \
 flutter run -d macos
@@ -142,19 +152,16 @@ flutter run -d macos
 
 ## Documentation
 
-- [Architecture](docs/architecture.md)
-- [Architecture decisions](docs/decisions/0001-llamadart-integration-boundary.md)
+- [Architecture](doc/architecture.md)
+- [Architecture decisions](doc/decisions/0001-llamadart-integration-boundary.md)
 - [Contributing](CONTRIBUTING.md)
-- [Core package README](packages/genui_genkit/README.md)
-- [llamadart package README](packages/genui_genkit_llamadart/README.md)
 
 ## Verify
 
-Run checks inside each package or example you touched:
+Run checks for the package and each example you touched:
 
 ```sh
-cd packages/genui_genkit && flutter analyze && flutter test
-cd packages/genui_genkit_llamadart && flutter analyze && flutter test
-cd examples/flutter_hybrid_genui && flutter analyze && flutter test
-cd examples/genui_backend_server && dart analyze && dart test
+flutter analyze && flutter test
+cd example/flutter_hybrid_genui && flutter analyze && flutter test
+cd example/genui_backend_server && dart analyze && dart test
 ```

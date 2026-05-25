@@ -1,0 +1,12 @@
+# Generated local build artifacts.
+.dart_tool/
+build/
+**/.dart_tool/
+**/build/
+**/.gradle/
+**/.kotlin/
+**/.symlinks/
+**/Pods/
+
+# The iOS scaffold is not part of the committed example surface yet.
+example/flutter_hybrid_genui/ios/
