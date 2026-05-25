@@ -1,0 +1,86 @@
+name: Publish to pub.dev
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to validate, for example v1.2.3. Publishing still requires a matching pushed tag.'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: pub.dev
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Setup Dart OIDC token
+        uses: dart-lang/setup-dart@v1
+
+      - name: Resolve release tag
+        id: release
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+
+          VERSION="${TAG#v}"
+          PUBSPEC_VERSION="$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml | head -n 1)"
+
+          if [[ -z "${PUBSPEC_VERSION}" ]]; then
+            echo "pubspec.yaml does not declare a version." >&2
+            exit 1
+          fi
+
+          if [[ "${VERSION}" != "${PUBSPEC_VERSION}" ]]; then
+            echo "Tag ${TAG} does not match pubspec.yaml version ${PUBSPEC_VERSION}." >&2
+            exit 1
+          fi
+
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze lib test example/main.dart
+
+      - name: Test
+        run: flutter test
+
+      - name: Publish dry run
+        run: flutter pub publish --dry-run
+
+      - name: Publish
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: flutter pub publish --force
