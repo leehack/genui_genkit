@@ -85,6 +85,17 @@ clear feature gap that Genkit's official server integration cannot cover.
 - Keep the root README pub.dev-friendly: start with the value proposition, add
   a visual explanation when useful, and include a copyable minimal example.
 
+## Changelog and Release Rules
+
+- Keep `CHANGELOG.md` updated under a top-level `## Unreleased` section for
+  every behavior, API, docs, example, packaging, or workflow change that should
+  be visible to package users or maintainers.
+- Ordinary PRs should add concise bullets to `## Unreleased`; do not create a
+  future version section during normal feature, fix, docs, or CI work.
+- Release prep PRs are responsible for bumping `pubspec.yaml`, replacing the
+  current `## Unreleased` section with the concrete release version, and
+  ensuring the release notes match the version being published.
+
 ## Lint Rules
 
 - Use the root `analysis_options.yaml` strict analyzer settings and additional

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Added GitHub Actions CI and tag-driven pub.dev release workflow automation.
+- Added a manual macOS integration smoke workflow for the hybrid Flutter
+  example.
+
 ## 0.1.0
 
 - Initial experimental workspace for GenUI + Genkit integration.
