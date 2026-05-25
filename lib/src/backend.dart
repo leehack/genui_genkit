@@ -4,6 +4,7 @@ import 'package:genui/genui.dart';
 
 /// Request sent from a GenUI session to a Genkit-backed backend.
 final class GenUiTurnRequest {
+  /// Creates a request for one GenUI turn.
   const GenUiTurnRequest({
     required this.message,
     this.history = const [],
@@ -72,33 +73,48 @@ sealed class GenUiBackendEvent {
 ///
 /// Chunks may include normal assistant prose and/or fenced A2UI JSON blocks.
 final class GenUiTextChunk extends GenUiBackendEvent {
+  /// Creates a text chunk event.
   const GenUiTextChunk(this.text);
 
+  /// Raw text emitted by the backend.
   final String text;
 }
 
 /// Signals a successfully completed backend turn.
 final class GenUiTurnDone extends GenUiBackendEvent {
+  /// Creates a completion event with optional result metadata.
   const GenUiTurnDone({this.metadata = const {}});
 
+  /// Backend-specific metadata for the completed turn.
+  ///
+  /// For Genkit backends this usually contains finish reason and token usage.
   final Map<String, Object?> metadata;
 }
 
 /// Signals an error reported by the backend.
 final class GenUiBackendError extends GenUiBackendEvent {
+  /// Creates a backend error event.
   const GenUiBackendError(this.message, {this.cause, this.stackTrace});
 
+  /// Human-readable error message suitable for chat/debug surfaces.
   final String message;
+
+  /// Original error object, when the backend can preserve it.
   final Object? cause;
+
+  /// Stack trace associated with [cause], when available.
   final StackTrace? stackTrace;
 }
 
 /// Backend contract used by [GenkitGenUiSession].
 abstract interface class GenUiBackend {
+  /// Starts one GenUI turn and returns backend events as they are produced.
   Stream<GenUiBackendEvent> send(GenUiTurnRequest request);
 
+  /// Requests cancellation of the active turn, if the backend supports it.
   FutureOr<void> cancelActiveTurn();
 
+  /// Releases any resources owned by the backend.
   FutureOr<void> dispose();
 }
 
@@ -112,6 +128,7 @@ typedef GenkitTextGenerator =
 /// from any provider, including `genkit_llamadart`, without forcing this package
 /// to depend on a concrete model plugin.
 final class LocalGenkitBackend implements GenUiBackend {
+  /// Creates a backend from an app-provided text stream generator.
   LocalGenkitBackend({required GenkitTextGenerator generate})
     : _generate = generate;
 

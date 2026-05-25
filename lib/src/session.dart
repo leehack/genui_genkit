@@ -16,22 +16,34 @@ final class GenUiChatEntry {
     this.isError = false,
   });
 
+  /// Creates a user-authored chat entry.
   const GenUiChatEntry.user(String text) : this._(isUser: true, text: text);
 
+  /// Creates an assistant text entry.
   const GenUiChatEntry.assistantText(String text)
     : this._(isUser: false, text: text);
 
+  /// Creates an assistant entry that renders a GenUI surface.
   const GenUiChatEntry.assistantSurface(String surfaceId)
     : this._(isUser: false, surfaceId: surfaceId);
 
+  /// Creates an assistant error entry.
   const GenUiChatEntry.error(String text)
     : this._(isUser: false, text: text, isError: true);
 
+  /// Whether this entry was authored by the user.
   final bool isUser;
+
+  /// Plain text to display for text and error entries.
   final String? text;
+
+  /// GenUI surface identifier to render for surface entries.
   final String? surfaceId;
+
+  /// Whether this entry represents an error.
   final bool isError;
 
+  /// Returns a copy with [chunk] appended to [text].
   GenUiChatEntry appendText(String chunk) {
     return GenUiChatEntry._(
       isUser: isUser,
@@ -49,7 +61,9 @@ typedef GenUiSystemPromptBuilder =
 /// Supplies app metadata for each outgoing turn.
 typedef GenUiMetadataBuilder = Map<String, Object?> Function();
 
+/// Options passed to a GenUI system prompt builder.
 final class GenUiSystemPromptOptions {
+  /// Creates system prompt options.
   const GenUiSystemPromptOptions({
     this.surfaceOperations,
     this.systemPromptFragments = const [],
@@ -57,12 +71,20 @@ final class GenUiSystemPromptOptions {
     this.technicalPossibilities = const TechnicalPossibilities(),
   });
 
+  /// Surface operations the model is allowed to request.
   final SurfaceOperations? surfaceOperations;
+
+  /// Extra prompt fragments appended to the catalog prompt.
   final Iterable<String> systemPromptFragments;
+
+  /// Optional client-side data model exposed to the model.
   final JsonMap? clientDataModel;
+
+  /// Technical capabilities exposed to the model.
   final TechnicalPossibilities technicalPossibilities;
 }
 
+/// Builds the default GenUI system prompt for the provided catalogs.
 String defaultGenUiSystemPromptBuilder(
   List<Catalog> catalogs,
   GenUiSystemPromptOptions options,
@@ -155,6 +177,7 @@ String compactGenUiSystemPromptBuilder(
 
 /// High-level session that bridges GenUI transport events to a backend.
 final class GenkitGenUiSession extends ChangeNotifier {
+  /// Creates a session backed by [backend] and one or more GenUI catalogs.
   GenkitGenUiSession({
     required GenUiBackend backend,
     Catalog? catalog,
@@ -209,18 +232,25 @@ final class GenkitGenUiSession extends ChangeNotifier {
   var _activeTurnCancelled = false;
   int? _currentAssistantTextIndex;
 
+  /// Controller that owns generated GenUI surfaces for this session.
   SurfaceController get surfaceController => _surfaceController;
 
+  /// Catalogs available to generated A2UI messages.
   List<Catalog> get catalogs => List.unmodifiable(_catalogs);
 
+  /// Raw text chunks emitted by the backend before A2UI parsing.
   Stream<String> get rawText => _rawTextController.stream;
 
+  /// Errors reported by the backend, parser, or surface controller.
   Stream<Object> get errors => _errorController.stream;
 
+  /// Chat entries suitable for rendering in a host chat UI.
   List<GenUiChatEntry> get messages => List.unmodifiable(_messages);
 
+  /// Whether a backend turn is currently in progress.
   bool get isProcessing => _isProcessing;
 
+  /// Cancels the active backend turn if one is in progress.
   Future<void> cancelActiveTurn() async {
     if (_disposed || !_isProcessing) return;
     _activeTurnCancelled = true;
@@ -238,6 +268,7 @@ final class GenkitGenUiSession extends ChangeNotifier {
     }
   }
 
+  /// Clears chat history and rendered chat entries when idle.
   void clear() {
     if (_disposed || _isProcessing) return;
     _messages.clear();
@@ -246,6 +277,7 @@ final class GenkitGenUiSession extends ChangeNotifier {
     _notifyIfAlive();
   }
 
+  /// Sends a user text message to the backend.
   Future<void> sendText(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty || _disposed || _isProcessing) return;

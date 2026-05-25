@@ -3,10 +3,13 @@ import 'package:genui/genui.dart';
 
 import 'session.dart';
 
+/// Builds a custom widget for one [GenUiChatEntry].
 typedef GenUiMessageWidgetBuilder =
     Widget Function(BuildContext context, GenUiChatEntry message);
 
+/// Renders the chat entries and generated surfaces from a session.
 final class GenUiMessageList extends StatelessWidget {
+  /// Creates a message list bound to [session].
   const GenUiMessageList({
     super.key,
     required this.session,
@@ -15,9 +18,16 @@ final class GenUiMessageList extends StatelessWidget {
     this.messageBuilder,
   });
 
+  /// Session whose messages should be rendered.
   final GenkitGenUiSession session;
+
+  /// Optional scroll controller for the underlying list.
   final ScrollController? controller;
+
+  /// Padding around the list content.
   final EdgeInsetsGeometry padding;
+
+  /// Optional custom message renderer.
   final GenUiMessageWidgetBuilder? messageBuilder;
 
   @override
@@ -45,14 +55,19 @@ final class GenUiMessageList extends StatelessWidget {
   }
 }
 
+/// Default renderer for one [GenUiChatEntry].
 final class GenUiMessageView extends StatelessWidget {
+  /// Creates a default message view.
   const GenUiMessageView({
     super.key,
     required this.session,
     required this.message,
   });
 
+  /// Session that owns rendered GenUI surfaces.
   final GenkitGenUiSession session;
+
+  /// Chat entry to render.
   final GenUiChatEntry message;
 
   @override
@@ -98,7 +113,9 @@ final class GenUiMessageView extends StatelessWidget {
   }
 }
 
+/// Text input for submitting prompts to a GenUI session.
 final class GenUiPromptComposer extends StatefulWidget {
+  /// Creates a prompt composer.
   const GenUiPromptComposer({
     super.key,
     required this.onSubmit,
@@ -106,8 +123,13 @@ final class GenUiPromptComposer extends StatefulWidget {
     this.hintText = 'Ask the model...',
   });
 
+  /// Called with the trimmed prompt when the user submits.
   final ValueChanged<String> onSubmit;
+
+  /// Whether the input accepts edits and submissions.
   final bool enabled;
+
+  /// Placeholder text for the input.
   final String hintText;
 
   @override
@@ -150,7 +172,9 @@ class _GenUiPromptComposerState extends State<GenUiPromptComposer> {
   }
 }
 
+/// Compact busy indicator shown while a backend turn is in progress.
 final class GenUiThinkingIndicator extends StatelessWidget {
+  /// Creates a thinking indicator.
   const GenUiThinkingIndicator({super.key});
 
   @override

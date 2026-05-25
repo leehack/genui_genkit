@@ -16,6 +16,7 @@ typedef GenkitConfigBuilder<CustomOptions> =
 
 /// Optional Genkit generate settings forwarded by [GenkitBackend].
 final class GenkitGenerateOptions<CustomOptions> {
+  /// Creates generation options forwarded to `Genkit.generateStream`.
   const GenkitGenerateOptions({
     this.config,
     this.configBuilder,
@@ -36,29 +37,66 @@ final class GenkitGenerateOptions<CustomOptions> {
     this.interruptRestart,
   });
 
+  /// Static provider-specific options used for every request.
   final CustomOptions? config;
+
+  /// Dynamic provider-specific options built from each GenUI turn.
   final GenkitConfigBuilder<CustomOptions>? configBuilder;
+
+  /// Tool definitions made available to the Genkit model.
   final List<genkit.Tool<Object?, Object?>>? tools;
+
+  /// Names of registered Genkit tools made available to the model.
   final List<String>? toolNames;
+
+  /// Provider-specific tool choice policy.
   final String? toolChoice;
+
+  /// Whether tool requests should be returned instead of automatically handled.
   final bool? returnToolRequests;
+
+  /// Maximum number of tool-calling turns Genkit may run for one request.
   final int? maxTurns;
+
+  /// Optional schema for structured model output.
   final SchemanticType<Object?>? outputSchema;
+
+  /// Optional structured output format name.
   final String? outputFormat;
+
+  /// Whether Genkit should constrain model output to [outputSchema].
   final bool? outputConstrained;
+
+  /// Additional instructions Genkit should include for structured output.
   final String? outputInstructions;
+
+  /// Whether Genkit should skip default structured-output instructions.
   final bool? outputNoInstructions;
+
+  /// Expected content type for structured output.
   final String? outputContentType;
+
+  /// Builds Genkit context from a GenUI turn.
+  ///
+  /// If omitted, non-empty [GenUiTurnRequest.metadata] is forwarded as context.
   final Map<String, dynamic>? Function(GenUiTurnRequest request)?
   contextBuilder;
+
+  /// Genkit generation middleware refs to apply to the request.
   final List<genkit.GenerateMiddlewareRef<CustomOptions>>? use;
+
+  /// Interrupt responses to resume a pending tool interaction.
   final List<genkit.InterruptResponse>? interruptRespond;
+
+  /// Tool request parts to restart an interrupted generation.
   final List<genkit.ToolRequestPart>? interruptRestart;
 }
 
+/// Converts a Genkit stream chunk into text for the GenUI session.
 typedef GenkitChunkMapper =
     String? Function(genkit.GenerateResponseChunk<Object?> chunk);
 
+/// Converts the final Genkit response into turn-completion metadata.
 typedef GenkitResultMetadataMapper =
     Map<String, Object?> Function(
       genkit.GenerateResponseHelper<Object?> response,
@@ -71,6 +109,10 @@ typedef GenkitResultMetadataMapper =
 /// only translates GenUI turn requests into Genkit messages and streams model
 /// text chunks back into [GenkitGenUiSession].
 final class GenkitBackend<CustomOptions> implements GenUiBackend {
+  /// Creates a backend for the selected Genkit [model].
+  ///
+  /// Provider setup stays outside this package: register plugins on [ai], then
+  /// pass the selected model reference and optional generation settings here.
   GenkitBackend({
     required this.ai,
     required this.model,
@@ -92,11 +134,22 @@ final class GenkitBackend<CustomOptions> implements GenUiBackend {
            resultMetadataMapper ?? defaultGenkitResultMetadataMapper,
        _onDispose = onDispose;
 
+  /// Genkit runtime configured by the host app.
   final genkit.Genkit ai;
+
+  /// Genkit model reference selected by the host app.
   final genkit.ModelRef<CustomOptions> model;
+
+  /// Generation options forwarded to Genkit for each turn.
   final GenkitGenerateOptions<CustomOptions> options;
+
+  /// Converts GenUI chat messages into Genkit messages.
   final GenkitMessageMapper messageMapper;
+
+  /// Converts Genkit stream chunks into text chunks.
   final GenkitChunkMapper chunkMapper;
+
+  /// Converts the final Genkit response into completion metadata.
   final GenkitResultMetadataMapper resultMetadataMapper;
   final FutureOr<void> Function()? _onDispose;
 
@@ -203,6 +256,7 @@ genkit.Message defaultGenkitMessageMapper(ChatMessage message) {
   );
 }
 
+/// Converts a GenUI chat role into the corresponding Genkit role.
 genkit.Role genkitRoleFor(ChatMessageRole role) {
   return switch (role) {
     ChatMessageRole.system => genkit.Role.system,
@@ -211,6 +265,7 @@ genkit.Role genkitRoleFor(ChatMessageRole role) {
   };
 }
 
+/// Converts a GenUI chat message into the default plain-text Genkit prompt.
 String defaultGenkitMessageText(ChatMessage message) {
   final fragments = <String>[];
   final text = message.text.trim();
@@ -234,6 +289,7 @@ String defaultGenkitMessageText(ChatMessage message) {
   return jsonEncode(message.toJson());
 }
 
+/// Extracts standard completion metadata from a Genkit response.
 Map<String, Object?> defaultGenkitResultMetadataMapper(
   genkit.GenerateResponseHelper<Object?> response,
 ) {
