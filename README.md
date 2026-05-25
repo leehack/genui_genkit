@@ -143,6 +143,7 @@ flutter run -d macos
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [Architecture decisions](docs/decisions/0001-llamadart-integration-boundary.md)
 - [Contributing](CONTRIBUTING.md)
 - [Core package README](packages/genui_genkit/README.md)
 - [llamadart package README](packages/genui_genkit_llamadart/README.md)

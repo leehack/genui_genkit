@@ -73,8 +73,10 @@ that turn.
   provider-neutral Genkit adapter, remote flow adapter, hybrid router, and
   lightweight widgets.
 - `packages/genui_genkit_llamadart` owns on-device model resolution and
-  `genkit_llamadart` registration. It depends on native model packages so the
-  core package does not have to.
+  `genkit_llamadart` registration for now. It depends on native model packages
+  so the core package does not have to. This package is transitional; generic
+  source/cache/progress/warm-up/lifecycle behavior should move upstream to
+  `genkit_llamadart`.
 - `examples/flutter_hybrid_genui` demonstrates a product-like client app with
   Local, Gemini, and Backend routes.
 - `examples/genui_backend_server` demonstrates backend mode with
@@ -106,3 +108,7 @@ package or example route instead of the core package.
 For backend serving, use Genkit's official server integration first. A separate
 server package is justified only if Genkit's server APIs cannot express the
 needed protocol.
+
+## Decisions
+
+- [ADR 0001: Move Generic Llamadart Model Lifecycle APIs To genkit_llamadart](decisions/0001-llamadart-integration-boundary.md)
