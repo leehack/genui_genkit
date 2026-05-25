@@ -1,0 +1,40 @@
+name: macOS Integration Smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: macOS integration smoke
+    runs-on: macos-latest
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: example/flutter_hybrid_genui
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter doctor
+        run: flutter doctor -v
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run macOS integration smoke
+        run: flutter test integration_test/app_smoke_test.dart -d macos

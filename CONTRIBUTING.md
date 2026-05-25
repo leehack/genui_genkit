@@ -81,3 +81,33 @@ Before publishing a package:
 - check that the README explains scope and limitations
 - confirm public APIs have enough Dart doc comments for generated docs
 - avoid URLs or badges that cannot be rendered from pub.dev
+
+## Release Automation
+
+The first version of a package must be published manually with
+`flutter pub publish`. After that, configure automated publishing from the
+package's pub.dev Admin tab:
+
+- repository: `leehack/genui_genkit`
+- tag pattern: `v{{version}}`
+- GitHub environment: `pub.dev`
+
+Future releases should update `pubspec.yaml` and `CHANGELOG.md`, merge the
+release-prep PR, then create and push the matching tag from `main`:
+
+```sh
+git switch main
+git pull --ff-only
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+The `Publish to pub.dev` workflow validates that the tag version matches
+`pubspec.yaml`, reruns package checks, performs a publish dry run, and publishes
+only on a pushed tag. Manual workflow dispatch validates the tag/version path
+without publishing.
+
+The default CI workflow runs package checks plus the Flutter and backend example
+analyze/test suites. The macOS integration smoke is available as a separate
+manual workflow because GitHub-hosted macOS desktop integration tests are much
+slower and less predictable than the unit/widget matrix.
