@@ -221,10 +221,10 @@ packages:
     dependency: "direct main"
     description:
       name: genkit_llamadart
-      sha256: d4fffa1664a5e8c91f59662cd79744a54036cebf862fb7e8b2ae0a93cc084c26
+      sha256: "965654259e4243ea92f16c7ced50c11b53950c173fc5668618db635653abb50f"
       url: "https://pub.dev"
     source: hosted
-    version: "1.2.0"
+    version: "1.3.2"
   genkit_shelf:
     dependency: "direct main"
     description:
@@ -325,10 +325,10 @@ packages:
     dependency: transitive
     description:
       name: llamadart
-      sha256: "9d0c2846234cd81feda3c3145fe12bec391f99726772c9fdb04dec40eca0bbaf"
+      sha256: "1b53bbab906e10eba39a4556d1a7e0538e40196b45345b085ff9f34c6e505f6e"
       url: "https://pub.dev"
     source: hosted
-    version: "0.6.15"
+    version: "0.7.2"
   logging:
     dependency: transitive
     description:
@@ -651,3 +651,4 @@ packages:
     version: "3.1.3"
 sdks:
   dart: ">=3.10.7 <4.0.0"
+  flutter: ">=3.38.0"

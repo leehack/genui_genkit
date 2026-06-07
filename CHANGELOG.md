@@ -1,12 +1,18 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 - 2026-06-07
 
 - Added GitHub Actions CI and tag-driven pub.dev release workflow automation.
 - Added a manual macOS integration smoke workflow for the hybrid Flutter
   example.
 - Documented Android Gemma 4 LiteRT-LM validation for the hybrid Flutter
-  example and updated its local llamadart dependency floor.
+  example and updated its local `genkit_llamadart`/`llamadart` dependency
+  floors.
+- Removed misleading llama.cpp-only load knobs from LiteRT-LM model params,
+  loading status, and per-turn performance telemetry.
+- Widened the provider-neutral adapter constraints to allow Genkit 0.14 and
+  Schemantic 0.2 while the local-model examples remain on the
+  `genkit_llamadart`-compatible Genkit 0.13 line.
 
 ## 0.1.0
 

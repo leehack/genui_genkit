@@ -1,5 +1,6 @@
 import 'package:flutter_hybrid_genui/src/activity_catalog.dart';
 import 'package:flutter_hybrid_genui/src/activity_prompt.dart';
+import 'package:flutter_hybrid_genui/src/local_inference_options.dart';
 import 'package:flutter_hybrid_genui/src/model_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:genui_genkit/genui_genkit.dart';
@@ -139,6 +140,26 @@ void main() {
       liteRtLmModel: config.isLiteRtLmModel,
     );
     expect(params.liteRtLmBackend, llama.LiteRtLmBackendPreference.gpu);
+    expect(params.batchSize, 0);
+    expect(params.microBatchSize, 0);
+  });
+
+  test('toModelParams keeps llama.cpp knobs out of LiteRT-LM loads', () {
+    const options = LlamaDartInferenceOptions(
+      contextSize: 2048,
+      gpuLayers: 0,
+      preferredBackend: llama.GpuBackend.cpu,
+      liteRtLmBackend: llama.LiteRtLmBackendPreference.gpu,
+      batchSize: 512,
+      microBatchSize: 128,
+    );
+
+    final params = options.toModelParams(liteRtLmModel: true);
+
+    expect(params.contextSize, 2048);
+    expect(params.liteRtLmBackend, llama.LiteRtLmBackendPreference.gpu);
+    expect(params.gpuLayers, llama.ModelParams.maxGpuLayers);
+    expect(params.preferredBackend, llama.GpuBackend.auto);
     expect(params.batchSize, 0);
     expect(params.microBatchSize, 0);
   });

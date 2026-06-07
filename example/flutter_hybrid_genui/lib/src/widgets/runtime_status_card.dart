@@ -768,10 +768,12 @@ String _statusDetail(ModelRuntimeStatus status) {
   if (status.phase == ModelRuntimePhase.loading) {
     final inference = status.config.inferenceOptions;
     final backend = _inferenceBackendLabel(status.config);
-    final batch = '${inference.batchSize}/${inference.microBatchSize}';
     final path = resolvedPath == null ? null : _shortPath(resolvedPath);
     final prefix = path ?? 'Model file ready';
-    return '$prefix · $backend · ctx ${inference.contextSize} · batch $batch';
+    final detail = '$prefix · $backend · ctx ${inference.contextSize}';
+    if (status.config.isLiteRtLmModel) return detail;
+    final batch = '${inference.batchSize}/${inference.microBatchSize}';
+    return '$detail · batch $batch';
   }
   if (status.phase == ModelRuntimePhase.ready && resolvedPath != null) {
     return _shortPath(resolvedPath);

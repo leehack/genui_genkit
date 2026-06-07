@@ -142,8 +142,8 @@ final session = GenkitGenUiSession(
 );
 ```
 
-For LiteRT-LM `.litertlm` bundles, use `llamadart` 0.7.1 or newer through
-`genkit_llamadart` 1.3.1 or newer. Chat and tool-call flows can run through the
+For LiteRT-LM `.litertlm` bundles, use `llamadart` 0.7.2 or newer through
+`genkit_llamadart` 1.3.2 or newer. Chat and tool-call flows can run through the
 same `GenkitBackend`; set `supportsConstrainedOutput: false` when preparing the
 model until LiteRT-LM grammar constraints are available through llamadart.
 

@@ -99,8 +99,6 @@ final class LlamaDartInferenceOptions {
     if (liteRtLmModel) {
       return llama.ModelParams(
         contextSize: contextSize,
-        gpuLayers: gpuLayers,
-        preferredBackend: preferredBackend,
         liteRtLmBackend: liteRtLmBackend,
       );
     }

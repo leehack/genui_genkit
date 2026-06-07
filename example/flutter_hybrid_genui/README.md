@@ -17,7 +17,7 @@ Flutter GenUI → genui_genkit → Dart Genkit → local llamadart
 - Start on the Local route and let llamadart resolve/cache the default Gemma
   GGUF model.
 - Use the LiteRT-LM Gemma 4 bundle on Android when validating the on-device
-  `genkit_llamadart` path with `llamadart` 0.7.1 or newer.
+  `genkit_llamadart` 1.3.2 path with `llamadart` 0.7.2 or newer.
 - Switch to Gemini from the route selector and configure the model/API key from
   route settings.
 - Switch to Backend after starting `example/genui_backend_server`.
@@ -25,7 +25,7 @@ Flutter GenUI → genui_genkit → Dart Genkit → local llamadart
   model output or A2UI parsing.
 - Compare Local inference profiles from route settings. The app shows TTFT,
   elapsed time, estimated decode/effective tok/s, output size, requested GPU
-  backend, context, and batch settings after each turn.
+  backend, context, and GGUF batch settings when applicable after each turn.
 - Use the Local status card to track both model download/cache progress and the
   separate model-loading warm-up before the first local turn. Preparing the
   model warms the same compact activity GenUI prompt used by chat turns.
@@ -120,6 +120,11 @@ llamadart. For `.litertlm` sources, the example forwards only LiteRT-LM load
 settings and leaves llama.cpp-only knobs such as batch and microbatch at their
 runtime defaults.
 
+This example keeps the Genkit packages on the 0.13 line because
+`genkit_llamadart` 1.3.2 declares `genkit ^0.13.2`. The root `genui_genkit`
+adapter also allows Genkit 0.14 for provider setups that do not share that
+constraint.
+
 Run the gated Android LiteRT-LM smoke test against a local model path:
 
 ```bash
@@ -200,12 +205,12 @@ Override `GENUI_QUALITY_BENCHMARK_MODELS` with semicolon-separated
 - `LLAMADART_GENUI_CONTEXT_SIZE` — default `4096`; the app uses a compact A2UI prompt so local Android runs avoid the heavier 8192-token context.
 - `LLAMADART_GENUI_BATCH_SIZE` — default `512`; GGUF/llama.cpp only.
 - `LLAMADART_GENUI_MICRO_BATCH_SIZE` — default `256`; GGUF/llama.cpp only.
-- `LLAMADART_GENUI_GPU_BACKEND` — `auto`, `cpu`, `vulkan`, `metal`, `cuda`, `blas`, `opencl`, or `hip`; default `auto`.
+- `LLAMADART_GENUI_GPU_BACKEND` — GGUF/llama.cpp backend selector: `auto`, `cpu`, `vulkan`, `metal`, `cuda`, `blas`, `opencl`, or `hip`; default `auto`.
 - `LLAMADART_GENUI_LITERT_LM_BACKEND` — LiteRT-LM runtime selector for `.litertlm` models: `auto`, `cpu`, `gpu`, or `npu`; default `auto`.
-- `LLAMADART_GENUI_GPU_LAYERS` — llamadart GPU layer count, default all supported layers when the selected backend uses GPU.
-- `LLAMADART_GENUI_THREADS` / `LLAMADART_GENUI_THREADS_BATCH` — generation and prompt-eval thread counts, default `0` for llamadart auto.
-- `LLAMADART_GENUI_FLASH_ATTENTION` — `auto`, `enabled`, or `disabled`; default `auto`.
-- `LLAMADART_GENUI_CACHE_TYPE_K` / `LLAMADART_GENUI_CACHE_TYPE_V` — `f16`, `q8_0`, or `q4_0`; default `f16`.
+- `LLAMADART_GENUI_GPU_LAYERS` — GGUF/llama.cpp GPU layer count, default all supported layers when the selected backend uses GPU.
+- `LLAMADART_GENUI_THREADS` / `LLAMADART_GENUI_THREADS_BATCH` — GGUF/llama.cpp generation and prompt-eval thread counts, default `0` for llamadart auto.
+- `LLAMADART_GENUI_FLASH_ATTENTION` — GGUF/llama.cpp `auto`, `enabled`, or `disabled`; default `auto`.
+- `LLAMADART_GENUI_CACHE_TYPE_K` / `LLAMADART_GENUI_CACHE_TYPE_V` — GGUF/llama.cpp `f16`, `q8_0`, or `q4_0`; default `f16`.
 - `LLAMADART_GENUI_MAX_TOKENS` — default `512` for local mobile responsiveness.
 - `LLAMADART_GENUI_TEMPERATURE` — default `0.0` for deterministic local A2UI.
 - `LLAMADART_GENUI_ENABLE_THINKING` — default `false`.
