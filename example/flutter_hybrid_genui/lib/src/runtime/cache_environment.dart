@@ -57,6 +57,9 @@ Map<String, String> environmentWithDartDefines(
     'LLAMADART_GENUI_GPU_BACKEND': String.fromEnvironment(
       'LLAMADART_GENUI_GPU_BACKEND',
     ),
+    'LLAMADART_GENUI_LITERT_LM_BACKEND': String.fromEnvironment(
+      'LLAMADART_GENUI_LITERT_LM_BACKEND',
+    ),
     'LLAMADART_GENUI_GPU_LAYERS': String.fromEnvironment(
       'LLAMADART_GENUI_GPU_LAYERS',
     ),

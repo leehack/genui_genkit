@@ -9,6 +9,7 @@ final class LlamaDartInferenceOptions {
     this.contextSize = 4096,
     this.gpuLayers = llama.ModelParams.maxGpuLayers,
     this.preferredBackend = llama.GpuBackend.auto,
+    this.liteRtLmBackend = llama.LiteRtLmBackendPreference.auto,
     this.splitMode = llama.ModelSplitMode.layer,
     this.mainGpu = 0,
     this.numberOfThreads = 0,
@@ -42,6 +43,7 @@ final class LlamaDartInferenceOptions {
   final int contextSize;
   final int gpuLayers;
   final llama.GpuBackend preferredBackend;
+  final llama.LiteRtLmBackendPreference liteRtLmBackend;
   final llama.ModelSplitMode splitMode;
   final int mainGpu;
   final int numberOfThreads;
@@ -59,6 +61,7 @@ final class LlamaDartInferenceOptions {
     int? contextSize,
     int? gpuLayers,
     llama.GpuBackend? preferredBackend,
+    llama.LiteRtLmBackendPreference? liteRtLmBackend,
     llama.ModelSplitMode? splitMode,
     int? mainGpu,
     int? numberOfThreads,
@@ -76,6 +79,7 @@ final class LlamaDartInferenceOptions {
       contextSize: contextSize ?? this.contextSize,
       gpuLayers: gpuLayers ?? this.gpuLayers,
       preferredBackend: preferredBackend ?? this.preferredBackend,
+      liteRtLmBackend: liteRtLmBackend ?? this.liteRtLmBackend,
       splitMode: splitMode ?? this.splitMode,
       mainGpu: mainGpu ?? this.mainGpu,
       numberOfThreads: numberOfThreads ?? this.numberOfThreads,
@@ -91,11 +95,21 @@ final class LlamaDartInferenceOptions {
     );
   }
 
-  llama.ModelParams toModelParams() {
+  llama.ModelParams toModelParams({bool liteRtLmModel = false}) {
+    if (liteRtLmModel) {
+      return llama.ModelParams(
+        contextSize: contextSize,
+        gpuLayers: gpuLayers,
+        preferredBackend: preferredBackend,
+        liteRtLmBackend: liteRtLmBackend,
+      );
+    }
+
     return llama.ModelParams(
       contextSize: contextSize,
       gpuLayers: gpuLayers,
       preferredBackend: preferredBackend,
+      liteRtLmBackend: liteRtLmBackend,
       splitMode: splitMode,
       mainGpu: mainGpu,
       numberOfThreads: numberOfThreads,

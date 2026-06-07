@@ -5,6 +5,8 @@
 - Added GitHub Actions CI and tag-driven pub.dev release workflow automation.
 - Added a manual macOS integration smoke workflow for the hybrid Flutter
   example.
+- Documented Android Gemma 4 LiteRT-LM validation for the hybrid Flutter
+  example and updated its local llamadart dependency floor.
 
 ## 0.1.0
 

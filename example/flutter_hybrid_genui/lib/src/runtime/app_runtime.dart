@@ -90,7 +90,9 @@ final class AppRuntime {
         final local = localModelConfig.value;
         final inference = local.inferenceOptions;
         return TurnPerformanceProfile(
-          backendName: inference.preferredBackend.name,
+          backendName: local.isLiteRtLmModel
+              ? 'litert-lm:${inference.liteRtLmBackend.name}'
+              : inference.preferredBackend.name,
           gpuLayers: inference.gpuLayers,
           contextSize: inference.contextSize,
           batchSize: inference.batchSize,

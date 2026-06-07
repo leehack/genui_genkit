@@ -16,6 +16,8 @@ Flutter GenUI → genui_genkit → Dart Genkit → local llamadart
 
 - Start on the Local route and let llamadart resolve/cache the default Gemma
   GGUF model.
+- Use the LiteRT-LM Gemma 4 bundle on Android when validating the on-device
+  `genkit_llamadart` path with `llamadart` 0.7.1 or newer.
 - Switch to Gemini from the route selector and configure the model/API key from
   route settings.
 - Switch to Backend after starting `example/genui_backend_server`.
@@ -98,6 +100,54 @@ Use another Hugging Face GGUF:
 LLAMADART_GENUI_MODEL_SOURCE=hf://owner/repo/path/to/model.gguf flutter run -d macos
 ```
 
+Use the Gemma 4 LiteRT-LM bundle on Android:
+
+```bash
+flutter run -d <android-device-id> \
+  --dart-define=LLAMADART_GENUI_MODEL_SOURCE=https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm?download=true \
+  --dart-define=LLAMADART_GENUI_MODEL_LABEL="Gemma 4 E2B LiteRT-LM" \
+  --dart-define=LLAMADART_GENUI_LITERT_LM_BACKEND=auto \
+  --dart-define=LLAMADART_GENUI_CACHE_POLICY=preferCached \
+  --dart-define=LLAMADART_GENUI_MAX_TOKENS=256 \
+  --dart-define=LLAMADART_GENUI_TEMPERATURE=0.0 \
+  --dart-define=LLAMADART_GENUI_ENABLE_THINKING=false
+```
+
+LiteRT-LM supports the chat/tool-call path used by this example. The local
+backend disables Genkit constrained-output metadata for `.litertlm` sources
+until the LiteRT-LM grammar/constrained decoding path is available through
+llamadart. For `.litertlm` sources, the example forwards only LiteRT-LM load
+settings and leaves llama.cpp-only knobs such as batch and microbatch at their
+runtime defaults.
+
+Run the gated Android LiteRT-LM smoke test against a local model path:
+
+```bash
+flutter test integration_test/local_litert_lm_smoke_test.dart \
+  -d <android-device-id> \
+  --dart-define=GENUI_RUN_LOCAL_LITERT_SMOKE=true \
+  --dart-define=LLAMADART_GENUI_MODEL_SOURCE=/data/local/tmp/gemma-4-E2B-it.litertlm \
+  --dart-define=LLAMADART_GENUI_MODEL_LABEL="Gemma 4 E2B LiteRT-LM" \
+  --dart-define=LLAMADART_GENUI_LITERT_LM_BACKEND=auto \
+  --dart-define=LLAMADART_GENUI_MAX_TOKENS=64 \
+  --dart-define=LLAMADART_GENUI_TEMPERATURE=0.0 \
+  --dart-define=LLAMADART_GENUI_ENABLE_THINKING=false
+```
+
+Run the GenUI quality/timing benchmark:
+
+```bash
+flutter test integration_test/local_litert_lm_genui_benchmark_test.dart \
+  -d <android-device-id> \
+  --dart-define=GENUI_RUN_LOCAL_LITERT_GENUI_BENCHMARK=true \
+  --dart-define=LLAMADART_GENUI_MODEL_SOURCE=/data/local/tmp/gemma-4-E2B-it.litertlm \
+  --dart-define=LLAMADART_GENUI_MODEL_LABEL="Gemma 4 E2B LiteRT-LM" \
+  --dart-define=LLAMADART_GENUI_LITERT_LM_BACKEND=auto \
+  --dart-define=LLAMADART_GENUI_MAX_TOKENS=512 \
+  --dart-define=LLAMADART_GENUI_TEMPERATURE=0.2 \
+  --dart-define=LLAMADART_GENUI_ENABLE_THINKING=false
+```
+
 Refresh the package cache:
 
 ```bash
@@ -139,7 +189,7 @@ Override `GENUI_QUALITY_BENCHMARK_MODELS` with semicolon-separated
 - `GENUI_GEMINI_TEMPERATURE` — direct Gemini temperature, default `0.2`.
 - `GENUI_GEMINI_MAX_TOKENS` — direct Gemini max output tokens, default `2048`.
 - Gemini model/API key, Backend URL, and Local inference settings can also be edited from the route settings button in the app.
-- `LLAMADART_GENUI_MODEL_SOURCE` — local path, `https://...`, or `hf://owner/repo/file.gguf`; defaults to Gemma 4 E2B.
+- `LLAMADART_GENUI_MODEL_SOURCE` — local path, `https://...`, `hf://owner/repo/file.gguf`, or a `.litertlm` bundle; defaults to Gemma 4 E2B GGUF.
 - `LLAMADART_MODEL_PATH` — legacy local-path override, still supported.
 - `LLAMADART_GENUI_MMPROJ_SOURCE` / `LLAMADART_MMPROJ_PATH` — optional multimodal projector source.
 - `LLAMADART_GENUI_CACHE_DIR` — package-managed model cache root. On Android/iOS the app defaults to `<application support>/llamadart/genui`; on desktop the config falls back to the user's cache directory when available.
@@ -148,9 +198,10 @@ Override `GENUI_QUALITY_BENCHMARK_MODELS` with semicolon-separated
 - `LLAMADART_GENUI_BEARER_TOKEN` or `HUGGING_FACE_HUB_TOKEN` — optional token for private or rate-limited model downloads.
 - `LLAMADART_GENUI_MODEL_NAME` — Genkit model name, default `local-genui`.
 - `LLAMADART_GENUI_CONTEXT_SIZE` — default `4096`; the app uses a compact A2UI prompt so local Android runs avoid the heavier 8192-token context.
-- `LLAMADART_GENUI_BATCH_SIZE` — default `512`.
-- `LLAMADART_GENUI_MICRO_BATCH_SIZE` — default `256`.
+- `LLAMADART_GENUI_BATCH_SIZE` — default `512`; GGUF/llama.cpp only.
+- `LLAMADART_GENUI_MICRO_BATCH_SIZE` — default `256`; GGUF/llama.cpp only.
 - `LLAMADART_GENUI_GPU_BACKEND` — `auto`, `cpu`, `vulkan`, `metal`, `cuda`, `blas`, `opencl`, or `hip`; default `auto`.
+- `LLAMADART_GENUI_LITERT_LM_BACKEND` — LiteRT-LM runtime selector for `.litertlm` models: `auto`, `cpu`, `gpu`, or `npu`; default `auto`.
 - `LLAMADART_GENUI_GPU_LAYERS` — llamadart GPU layer count, default all supported layers when the selected backend uses GPU.
 - `LLAMADART_GENUI_THREADS` / `LLAMADART_GENUI_THREADS_BATCH` — generation and prompt-eval thread counts, default `0` for llamadart auto.
 - `LLAMADART_GENUI_FLASH_ATTENTION` — `auto`, `enabled`, or `disabled`; default `auto`.

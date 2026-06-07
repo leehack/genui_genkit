@@ -151,6 +151,7 @@ final class ModelConfig {
   final String modelName;
   final LlamaDartInferenceOptions inferenceOptions;
   int get contextSize => inferenceOptions.contextSize;
+  bool get isLiteRtLmModel => _isLiteRtLmSource(modelSource);
   final double temperature;
   final int maxTokens;
   final bool enableThinking;
@@ -239,6 +240,10 @@ final class ModelConfig {
         preferredBackend: _parseGpuBackend(
           environment['LLAMADART_GENUI_GPU_BACKEND'],
           fallback: LlamaDartInferenceOptions.mobileGenUi.preferredBackend,
+        ),
+        liteRtLmBackend: _parseLiteRtLmBackend(
+          environment['LLAMADART_GENUI_LITERT_LM_BACKEND'],
+          fallback: LlamaDartInferenceOptions.mobileGenUi.liteRtLmBackend,
         ),
         numberOfThreads: _parseInt(
           environment['LLAMADART_GENUI_THREADS'],
@@ -389,6 +394,21 @@ final class ModelConfig {
     };
   }
 
+  static llama.LiteRtLmBackendPreference _parseLiteRtLmBackend(
+    String? value, {
+    required llama.LiteRtLmBackendPreference fallback,
+  }) {
+    final normalized = _normalizeToken(value);
+    if (normalized == null) return fallback;
+    return switch (normalized) {
+      'auto' => llama.LiteRtLmBackendPreference.auto,
+      'cpu' => llama.LiteRtLmBackendPreference.cpu,
+      'gpu' => llama.LiteRtLmBackendPreference.gpu,
+      'npu' => llama.LiteRtLmBackendPreference.npu,
+      _ => throw FormatException('Invalid LiteRT-LM backend: $value'),
+    };
+  }
+
   static llama.FlashAttention _parseFlashAttention(
     String? value, {
     required llama.FlashAttention fallback,
@@ -424,5 +444,9 @@ final class ModelConfig {
     final trimmed = _emptyToNull(value);
     if (trimmed == null) return null;
     return trimmed.toLowerCase().replaceAll('-', '_');
+  }
+
+  static bool _isLiteRtLmSource(llama.ModelSource source) {
+    return source.fileName.toLowerCase().endsWith('.litertlm');
   }
 }

@@ -139,8 +139,10 @@ Future<_ModelBenchmarkResult> _runInference(
   final engine = llama.LlamaEngine(llama.LlamaBackend());
   final loadStopwatch = Stopwatch()..start();
   try {
-    const modelParams = llama.ModelParams(batchSize: 512, microBatchSize: 256);
-    await engine.loadModel(modelPath, modelParams: modelParams);
+    await engine.loadModel(
+      modelPath,
+      modelParams: _modelParamsForPath(modelPath),
+    );
     loadStopwatch.stop();
 
     final backendName = await engine.getBackendName();
@@ -216,6 +218,15 @@ Future<_ModelBenchmarkResult> _runInference(
   } finally {
     await engine.dispose();
   }
+}
+
+llama.ModelParams _modelParamsForPath(String modelPath) {
+  if (modelPath.toLowerCase().endsWith('.litertlm')) {
+    return ModelConfig.fromEnvironment(
+      Platform.environment,
+    ).inferenceOptions.toModelParams(liteRtLmModel: true);
+  }
+  return const llama.ModelParams(batchSize: 512, microBatchSize: 256);
 }
 
 Future<_QualityAnalysis> _analyzeOutput(

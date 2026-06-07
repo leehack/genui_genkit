@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../local_inference_options.dart';
 import '../model_config.dart';
 import '../runtime/app_runtime.dart';
 import 'route_settings_dialog.dart';
@@ -768,7 +767,7 @@ String _statusDetail(ModelRuntimeStatus status) {
   final resolvedPath = status.resolvedModelPath;
   if (status.phase == ModelRuntimePhase.loading) {
     final inference = status.config.inferenceOptions;
-    final backend = inference.preferredBackend.name;
+    final backend = _inferenceBackendLabel(status.config);
     final batch = '${inference.batchSize}/${inference.microBatchSize}';
     final path = resolvedPath == null ? null : _shortPath(resolvedPath);
     final prefix = path ?? 'Model file ready';
@@ -795,7 +794,11 @@ String _cachePolicyLabel(String value) {
       .toLowerCase();
 }
 
-String _inferenceBackendLabel(LlamaDartInferenceOptions inference) {
+String _inferenceBackendLabel(ModelConfig config) {
+  final inference = config.inferenceOptions;
+  if (config.isLiteRtLmModel) {
+    return 'litert-lm ${inference.liteRtLmBackend.name}';
+  }
   final gpuLayers = inference.gpuLayers;
   final layerLabel = gpuLayers >= 999
       ? 'all layers'
@@ -823,7 +826,7 @@ String _routeDetail(AppRuntime runtime, GenUiAiRoute route) {
     GenUiAiRoute.local =>
       'On-device llamadart using '
           '${runtime.localModelConfig.value.modelSourceDisplayName} · '
-          '${_inferenceBackendLabel(runtime.localModelConfig.value.inferenceOptions)}',
+          '${_inferenceBackendLabel(runtime.localModelConfig.value)}',
     GenUiAiRoute.gemini =>
       'Direct Genkit Gemini provider using ${runtime.geminiConfig.value.modelName}',
     GenUiAiRoute.backend =>
