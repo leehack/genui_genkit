@@ -115,7 +115,9 @@ final class LlamaLocalGenkitBackend implements GenUiBackend {
     final task = llamaDart.prepareModelTask(
       name: config.modelName,
       source: config.modelSource,
-      modelParams: config.inferenceOptions.toModelParams(),
+      modelParams: config.inferenceOptions.toModelParams(
+        liteRtLmModel: config.isLiteRtLmModel,
+      ),
       mmprojSource: config.mmprojSource,
       options: config.loadOptionsFor(
         config.modelSource,
@@ -128,6 +130,7 @@ final class LlamaLocalGenkitBackend implements GenUiBackend {
               sha256: config.mmprojSha256,
             ),
       supportsEmbeddings: false,
+      supportsConstrainedOutput: !config.isLiteRtLmModel,
     );
     _preparationTask = task;
     _preparationSubscription = task.snapshots.listen((snapshot) {

@@ -253,6 +253,8 @@ class _LocalSettingsDialogState extends State<_LocalSettingsDialog> {
   );
   late llama.GpuBackend _preferredBackend =
       widget.runtime.localModelConfig.value.inferenceOptions.preferredBackend;
+  late llama.LiteRtLmBackendPreference _liteRtLmBackend =
+      widget.runtime.localModelConfig.value.inferenceOptions.liteRtLmBackend;
   String? _errorText;
 
   @override
@@ -303,6 +305,7 @@ class _LocalSettingsDialogState extends State<_LocalSettingsDialog> {
         contextSize: contextSize,
         gpuLayers: gpuLayers,
         preferredBackend: _preferredBackend,
+        liteRtLmBackend: _liteRtLmBackend,
         batchSize: batchSize,
         microBatchSize: microBatchSize,
       ),
@@ -356,6 +359,36 @@ class _LocalSettingsDialogState extends State<_LocalSettingsDialog> {
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<llama.LiteRtLmBackendPreference>(
+                initialValue: _liteRtLmBackend,
+                decoration: const InputDecoration(
+                  labelText: 'LiteRT-LM backend',
+                  prefixIcon: Icon(Icons.offline_bolt_outlined),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: llama.LiteRtLmBackendPreference.auto,
+                    child: Text('Auto'),
+                  ),
+                  DropdownMenuItem(
+                    value: llama.LiteRtLmBackendPreference.cpu,
+                    child: Text('CPU'),
+                  ),
+                  DropdownMenuItem(
+                    value: llama.LiteRtLmBackendPreference.gpu,
+                    child: Text('GPU'),
+                  ),
+                  DropdownMenuItem(
+                    value: llama.LiteRtLmBackendPreference.npu,
+                    child: Text('NPU'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _liteRtLmBackend = value);
+                },
               ),
               const SizedBox(height: 12),
               Row(

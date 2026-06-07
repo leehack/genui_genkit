@@ -89,12 +89,15 @@ final class AppRuntime {
         if (routeName != GenUiAiRoute.local.metadataValue) return null;
         final local = localModelConfig.value;
         final inference = local.inferenceOptions;
+        final isLiteRtLmModel = local.isLiteRtLmModel;
         return TurnPerformanceProfile(
-          backendName: inference.preferredBackend.name,
-          gpuLayers: inference.gpuLayers,
+          backendName: isLiteRtLmModel
+              ? 'litert-lm:${inference.liteRtLmBackend.name}'
+              : inference.preferredBackend.name,
+          gpuLayers: isLiteRtLmModel ? null : inference.gpuLayers,
           contextSize: inference.contextSize,
-          batchSize: inference.batchSize,
-          microBatchSize: inference.microBatchSize,
+          batchSize: isLiteRtLmModel ? null : inference.batchSize,
+          microBatchSize: isLiteRtLmModel ? null : inference.microBatchSize,
           maxTokens: local.maxTokens,
         );
       },

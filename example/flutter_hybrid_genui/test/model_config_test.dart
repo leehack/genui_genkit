@@ -1,5 +1,6 @@
 import 'package:flutter_hybrid_genui/src/activity_catalog.dart';
 import 'package:flutter_hybrid_genui/src/activity_prompt.dart';
+import 'package:flutter_hybrid_genui/src/local_inference_options.dart';
 import 'package:flutter_hybrid_genui/src/model_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:genui_genkit/genui_genkit.dart';
@@ -16,6 +17,11 @@ void main() {
     expect(config.contextSize, 4096);
     expect(config.inferenceOptions.batchSize, 512);
     expect(config.inferenceOptions.microBatchSize, 256);
+    expect(
+      config.inferenceOptions.liteRtLmBackend,
+      llama.LiteRtLmBackendPreference.auto,
+    );
+    expect(config.isLiteRtLmModel, isFalse);
     expect(config.maxTokens, 512);
     expect(config.temperature, 0);
   });
@@ -65,6 +71,7 @@ void main() {
       'LLAMADART_GENUI_MODEL_NAME': 'custom-genui',
       'LLAMADART_GENUI_CONTEXT_SIZE': '16384',
       'LLAMADART_GENUI_GPU_BACKEND': 'cpu',
+      'LLAMADART_GENUI_LITERT_LM_BACKEND': 'npu',
       'LLAMADART_GENUI_GPU_LAYERS': '0',
       'LLAMADART_GENUI_THREADS': '4',
       'LLAMADART_GENUI_THREADS_BATCH': '4',
@@ -85,6 +92,10 @@ void main() {
     expect(config.modelName, 'custom-genui');
     expect(config.contextSize, 16384);
     expect(config.inferenceOptions.preferredBackend, llama.GpuBackend.cpu);
+    expect(
+      config.inferenceOptions.liteRtLmBackend,
+      llama.LiteRtLmBackendPreference.npu,
+    );
     expect(config.inferenceOptions.gpuLayers, 0);
     expect(config.inferenceOptions.numberOfThreads, 4);
     expect(config.inferenceOptions.numberOfThreadsBatch, 4);
@@ -108,6 +119,49 @@ void main() {
     });
 
     expect(config.modelSource.path, '/Users/test/Models/local.gguf');
+  });
+
+  test('fromEnvironment recognizes LiteRT-LM model sources', () {
+    final config = ModelConfig.fromEnvironment(const {
+      'HOME': '/Users/test',
+      'LLAMADART_GENUI_MODEL_SOURCE':
+          'https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm?download=true',
+      'LLAMADART_GENUI_LITERT_LM_BACKEND': 'gpu',
+    });
+
+    expect(config.modelSource.fileName, 'gemma-4-E2B-it.litertlm');
+    expect(config.isLiteRtLmModel, isTrue);
+    expect(
+      config.inferenceOptions.liteRtLmBackend,
+      llama.LiteRtLmBackendPreference.gpu,
+    );
+
+    final params = config.inferenceOptions.toModelParams(
+      liteRtLmModel: config.isLiteRtLmModel,
+    );
+    expect(params.liteRtLmBackend, llama.LiteRtLmBackendPreference.gpu);
+    expect(params.batchSize, 0);
+    expect(params.microBatchSize, 0);
+  });
+
+  test('toModelParams keeps llama.cpp knobs out of LiteRT-LM loads', () {
+    const options = LlamaDartInferenceOptions(
+      contextSize: 2048,
+      gpuLayers: 0,
+      preferredBackend: llama.GpuBackend.cpu,
+      liteRtLmBackend: llama.LiteRtLmBackendPreference.gpu,
+      batchSize: 512,
+      microBatchSize: 128,
+    );
+
+    final params = options.toModelParams(liteRtLmModel: true);
+
+    expect(params.contextSize, 2048);
+    expect(params.liteRtLmBackend, llama.LiteRtLmBackendPreference.gpu);
+    expect(params.gpuLayers, llama.ModelParams.maxGpuLayers);
+    expect(params.preferredBackend, llama.GpuBackend.auto);
+    expect(params.batchSize, 0);
+    expect(params.microBatchSize, 0);
   });
 
   test('HybridAppConfig parses route and remote providers', () {
