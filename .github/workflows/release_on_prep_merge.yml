@@ -120,7 +120,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
           fetch-depth: 0
-          persist-credentials: false
 
       - name: Validate release state
         id: release
@@ -166,9 +165,26 @@ jobs:
             exit 1
           fi
 
+          tag_refs="$(
+            git ls-remote origin \
+              "refs/tags/$tag" \
+              "refs/tags/$tag^{}"
+          )"
           tag_sha="$(
-            git ls-remote --refs --tags origin "refs/tags/$tag" |
-              awk 'NR == 1 {print $1}'
+            printf '%s\n' "$tag_refs" |
+              awk \
+                -v base_ref="refs/tags/$tag" \
+                -v peeled_ref="refs/tags/$tag^{}" '
+                  $2 == base_ref { base_sha = $1 }
+                  $2 == peeled_ref { peeled_sha = $1 }
+                  END {
+                    if (peeled_sha != "") {
+                      print peeled_sha
+                    } else {
+                      print base_sha
+                    }
+                  }
+                '
           )"
           if [[ -n "$tag_sha" && "$tag_sha" != "$release_sha" ]]; then
             echo "Release tag $tag already points to $tag_sha, not $release_sha." >&2

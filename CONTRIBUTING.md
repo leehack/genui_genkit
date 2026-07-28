@@ -107,11 +107,12 @@ commit and dispatches `Publish to pub.dev` at that tag.
 
 The publish workflow reruns package checks, performs a publish dry run,
 publishes through pub.dev OIDC, and creates or updates the GitHub Release from
-the version's changelog notes. Manual workflow dispatch can retry the
-pre-publication path and must be launched against an existing matching release
-tag; dispatching it from a branch fails before publication. Rerunning a failed
-`Release on prep merge` workflow repairs a missing GitHub Release when the
-package version is already live.
+the version's changelog notes. Manual workflow dispatch from an existing
+matching release tag reruns the checks and attempts publication, so use it only
+to retry a failed publish while that version is not yet live; dispatching it
+from a branch fails before publication. Rerunning a failed `Release on prep
+merge` workflow repairs a missing GitHub Release when the package version is
+already live.
 
 Do not manually create the release tag after merging a guarded release-prep PR.
 Ordinary PRs must not use a release-prep branch pattern or the `release-prep`
