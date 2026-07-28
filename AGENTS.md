@@ -95,6 +95,14 @@ clear feature gap that Genkit's official server integration cannot cover.
 - Release prep PRs are responsible for bumping `pubspec.yaml`, replacing the
   current `## Unreleased` section with the concrete release version, and
   ensuring the release notes match the version being published.
+- Keep release-prep PRs limited to `CHANGELOG.md` and `pubspec.yaml`. Use a
+  same-repository branch named `release/<version>-prep` (or apply the
+  `release-prep` label when an alternate branch name is necessary).
+- Merging a guarded release-prep PR is approval to release. The merge workflow
+  tags the exact merge commit, dispatches publication, waits for pub.dev and
+  the GitHub Release, and fails rather than retagging a conflicting version.
+- Keep release workflow changes in ordinary PRs, separate from release-prep
+  PRs, so the release scope gate remains narrow and auditable.
 
 ## Lint Rules
 
