@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 - 2026-07-28
 
 - Added guarded release-preparation automation that tags the exact merged
   commit, publishes it to pub.dev, and creates the matching GitHub Release.
