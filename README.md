@@ -142,10 +142,11 @@ final session = GenkitGenUiSession(
 );
 ```
 
-For LiteRT-LM `.litertlm` bundles, use `llamadart` 0.8.0 or newer through
-`genkit_llamadart` 1.4.0 or newer. Chat and tool-call flows can run through the
-same `GenkitBackend`; set `supportsConstrainedOutput: false` when preparing the
-model until LiteRT-LM grammar constraints are available through llamadart.
+For LiteRT-LM `.litertlm` bundles, the compatibility floor is `llamadart` 0.8.0
+through `genkit_llamadart` 1.4.0 or newer. The hybrid example and Android smoke
+use `llamadart` 0.8.17. Chat and tool-call flows can run through the same
+`GenkitBackend`; set `supportsConstrainedOutput: false` when preparing the model
+until LiteRT-LM grammar constraints are available through llamadart.
 
 Backend mode through a Genkit flow:
 
