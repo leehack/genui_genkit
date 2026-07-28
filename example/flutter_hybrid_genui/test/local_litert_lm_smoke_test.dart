@@ -23,7 +23,9 @@ const _smokeUserPrompt = String.fromEnvironment(
 );
 
 void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  if (_runLocalLiteRtSmoke) {
+    IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  }
 
   testWidgets(
     'loads a LiteRT-LM model and streams through the local Genkit backend',

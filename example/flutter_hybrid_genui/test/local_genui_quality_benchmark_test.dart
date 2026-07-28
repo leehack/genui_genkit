@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:a2ui_core/a2ui_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_hybrid_genui/src/activity_catalog.dart';
 import 'package:flutter_hybrid_genui/src/model_config.dart';
@@ -254,9 +255,11 @@ Future<_QualityAnalysis> _analyzeOutput(
     errors.add(error.toString());
   }
 
-  final creates = messages.whereType<CreateSurface>().toList();
-  final updates = messages.whereType<UpdateComponents>().toList();
-  final components = updates.expand((message) => message.components).toList();
+  final creates = messages.whereType<CreateSurfaceMessage>().toList();
+  final updates = messages.whereType<UpdateComponentsMessage>().toList();
+  final components = updates
+      .expand((message) => message.components.map(Component.fromJson))
+      .toList();
   final componentTypes = components.map((component) => component.type).toSet();
   final root = components
       .where((component) => component.id == 'root')
@@ -297,8 +300,8 @@ Future<_QualityAnalysis> _analyzeOutput(
 
 int _qualityScore({
   required List<String> errors,
-  required List<CreateSurface> creates,
-  required List<UpdateComponents> updates,
+  required List<CreateSurfaceMessage> creates,
+  required List<UpdateComponentsMessage> updates,
   required Set<String> visibleComponentTypes,
   required bool hasRoot,
   required String output,
@@ -356,8 +359,8 @@ Set<String> _visibleComponentTypes(
 }
 
 bool _hasMatchingSurface(
-  List<CreateSurface> creates,
-  List<UpdateComponents> updates,
+  List<CreateSurfaceMessage> creates,
+  List<UpdateComponentsMessage> updates,
 ) {
   final created = creates.map((message) => message.surfaceId).toSet();
   return updates.any((message) => created.contains(message.surfaceId));

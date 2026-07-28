@@ -25,7 +25,9 @@ const _prompt = String.fromEnvironment(
 );
 
 void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  if (_runBenchmark) {
+    IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  }
 
   testWidgets(
     'benchmarks Gemma 4 LiteRT-LM GenUI output on device',

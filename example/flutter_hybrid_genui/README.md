@@ -17,7 +17,7 @@ Flutter GenUI → genui_genkit → Dart Genkit → local llamadart
 - Start on the Local route and let llamadart resolve/cache the default Gemma
   GGUF model.
 - Use the LiteRT-LM Gemma 4 bundle on Android when validating the on-device
-  `genkit_llamadart` 1.3.2 path with `llamadart` 0.7.2 or newer.
+  `genkit_llamadart` 1.4.0 path with `llamadart` 0.8.17 or newer.
 - Switch to Gemini from the route selector and configure the model/API key from
   route settings.
 - Switch to Backend after starting `example/genui_backend_server`.
@@ -37,6 +37,8 @@ cd example/flutter_hybrid_genui
 flutter pub get
 flutter run -d macos
 ```
+
+The current native llamadart package requires macOS 14 or newer.
 
 The app starts on the Local route. On first use, it resolves the default model
 through llamadart's package-managed download/cache layer:
@@ -120,15 +122,14 @@ llamadart. For `.litertlm` sources, the example forwards only LiteRT-LM load
 settings and leaves llama.cpp-only knobs such as batch and microbatch at their
 runtime defaults.
 
-This example keeps the Genkit packages on the 0.13 line because
-`genkit_llamadart` 1.3.2 declares `genkit ^0.13.2`. The root `genui_genkit`
-adapter also allows Genkit 0.14 for provider setups that do not share that
-constraint.
+This example uses Genkit 0.15 with `genkit_llamadart` 1.4.0. The root
+`genui_genkit` adapter accepts compatible Genkit releases from 0.13 through
+0.15 and remains provider-neutral.
 
 Run the gated Android LiteRT-LM smoke test against a local model path:
 
 ```bash
-flutter test integration_test/local_litert_lm_smoke_test.dart \
+flutter test test/local_litert_lm_smoke_test.dart \
   -d <android-device-id> \
   --dart-define=GENUI_RUN_LOCAL_LITERT_SMOKE=true \
   --dart-define=LLAMADART_GENUI_MODEL_SOURCE=/data/local/tmp/gemma-4-E2B-it.litertlm \
@@ -142,7 +143,7 @@ flutter test integration_test/local_litert_lm_smoke_test.dart \
 Run the GenUI quality/timing benchmark:
 
 ```bash
-flutter test integration_test/local_litert_lm_genui_benchmark_test.dart \
+flutter test test/local_litert_lm_genui_benchmark_test.dart \
   -d <android-device-id> \
   --dart-define=GENUI_RUN_LOCAL_LITERT_GENUI_BENCHMARK=true \
   --dart-define=LLAMADART_GENUI_MODEL_SOURCE=/data/local/tmp/gemma-4-E2B-it.litertlm \
