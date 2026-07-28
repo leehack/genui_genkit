@@ -5,11 +5,6 @@ on:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Release tag to validate, for example v1.2.3. Publishing still requires a matching pushed tag.'
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -24,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: pub.dev
+    outputs:
+      version: ${{ steps.release.outputs.version }}
     permissions:
       contents: read
       id-token: write
@@ -31,8 +28,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -47,12 +42,18 @@ jobs:
         id: release
         shell: bash
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            TAG="${{ inputs.tag }}"
-          else
-            TAG="${GITHUB_REF_NAME}"
+          set -euo pipefail
+
+          if [[ "$GITHUB_REF_TYPE" != "tag" ]]; then
+            echo "Publish must run from a vX.Y.Z tag, not $GITHUB_REF." >&2
+            exit 1
+          fi
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Publish tag must use the stable vX.Y.Z format: $GITHUB_REF_NAME" >&2
+            exit 1
           fi
 
+          TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
           PUBSPEC_VERSION="$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml | head -n 1)"
 
@@ -63,6 +64,18 @@ jobs:
 
           if [[ "${VERSION}" != "${PUBSPEC_VERSION}" ]]; then
             echo "Tag ${TAG} does not match pubspec.yaml version ${PUBSPEC_VERSION}." >&2
+            exit 1
+          fi
+
+          FIRST_HEADING="$(awk '/^## / {print; exit}' CHANGELOG.md)"
+          read -r MARKER CHANGELOG_VERSION SEPARATOR CHANGELOG_DATE EXTRA <<< "$FIRST_HEADING"
+          if [[ "$MARKER" != "##" ||
+            "$CHANGELOG_VERSION" != "$VERSION" ||
+            "$SEPARATOR" != "-" ||
+            ! "$CHANGELOG_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ||
+            -n "${EXTRA:-}" ]]; then
+            echo "CHANGELOG.md must start with: ## $VERSION - YYYY-MM-DD" >&2
+            echo "Found: ${FIRST_HEADING:-<none>}" >&2
             exit 1
           fi
 
@@ -82,5 +95,54 @@ jobs:
         run: flutter pub publish --dry-run
 
       - name: Publish
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         run: flutter pub publish --force
+
+  release:
+    name: Create GitHub Release
+    needs:
+      - publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Extract release notes
+        env:
+          VERSION: ${{ needs.publish.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          awk -v version="$VERSION" '
+            index($0, "## " version " - ") == 1 { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "CHANGELOG.md does not contain release notes for $VERSION." >&2
+            exit 1
+          fi
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" \
+              --title "$GITHUB_REF_NAME" \
+              --notes-file release-notes.md \
+              --latest
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "$GITHUB_REF_NAME" \
+              --notes-file release-notes.md \
+              --verify-tag \
+              --latest
+          fi

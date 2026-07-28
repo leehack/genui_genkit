@@ -92,20 +92,30 @@ package's pub.dev Admin tab:
 - tag pattern: `v{{version}}`
 - GitHub environment: `pub.dev`
 
-Future releases should update `pubspec.yaml` and `CHANGELOG.md`, merge the
-release-prep PR, then create and push the matching tag from `main`:
+Future releases use a guarded release-prep PR:
 
-```sh
-git switch main
-git pull --ff-only
-git tag v1.2.3
-git push origin v1.2.3
-```
+1. Create a same-repository branch named `release/<version>-prep`.
+2. Change only `pubspec.yaml` and `CHANGELOG.md`: bump the package version and
+   replace `## Unreleased` with `## <version> - YYYY-MM-DD`.
+3. Run the normal release checks and complete review.
+4. Merge the PR to approve publication.
 
-The `Publish to pub.dev` workflow validates that the tag version matches
-`pubspec.yaml`, reruns package checks, performs a publish dry run, and publishes
-only on a pushed tag. Manual workflow dispatch validates the tag/version path
-without publishing.
+The `Release on prep merge` workflow verifies the branch or `release-prep`
+label, same-repository origin, two-file scope, version, changelog heading, and
+merge commit. It then creates the matching `v<version>` tag at the exact merge
+commit and dispatches `Publish to pub.dev` at that tag.
+
+The publish workflow reruns package checks, performs a publish dry run,
+publishes through pub.dev OIDC, and creates or updates the GitHub Release from
+the version's changelog notes. Manual workflow dispatch can retry the
+pre-publication path and must be launched against an existing matching release
+tag; dispatching it from a branch fails before publication. Rerunning a failed
+`Release on prep merge` workflow repairs a missing GitHub Release when the
+package version is already live.
+
+Do not manually create the release tag after merging a guarded release-prep PR.
+Ordinary PRs must not use a release-prep branch pattern or the `release-prep`
+label.
 
 The default CI workflow runs package checks plus the Flutter and backend example
 analyze/test suites. The macOS integration smoke is available as a separate

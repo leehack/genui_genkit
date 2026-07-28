@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added guarded release-preparation automation that tags the exact merged
+  commit, publishes it to pub.dev, and creates the matching GitHub Release.
 - Added compatibility with Genkit 0.15, GenUI 0.10, and the extracted
   `a2ui_core` message types.
 - Upgraded the hybrid and backend examples to `genkit_llamadart` 1.4.0 and the
