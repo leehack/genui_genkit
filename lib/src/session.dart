@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:a2ui_core/a2ui_core.dart'
+    show A2uiMessage, CreateSurfaceMessage, UpdateComponentsMessage;
 import 'package:flutter/foundation.dart';
 import 'package:genui/genui.dart';
 
@@ -162,7 +164,7 @@ String compactGenUiSystemPromptBuilder(
 
   return catalogs
       .map((catalog) {
-        final schema = A2uiMessage.a2uiMessageSchema(catalog).toJson();
+        final schema = a2uiMessageSchema(catalog).toJson();
         return [
           ...baseFragments,
           ...catalog.systemPromptFragments,
@@ -393,13 +395,13 @@ final class GenkitGenUiSession extends ChangeNotifier {
   }
 
   void _handleA2uiMessage(A2uiMessage message) {
-    if (message case UpdateComponents(
+    if (message case UpdateComponentsMessage(
       :final surfaceId,
     ) when !_surfaceController.registry.hasSurface(surfaceId)) {
       final catalogId = _defaultCatalogId();
       if (catalogId != null) {
         _surfaceController.handleMessage(
-          CreateSurface(surfaceId: surfaceId, catalogId: catalogId),
+          CreateSurfaceMessage(surfaceId: surfaceId, catalogId: catalogId),
         );
       }
     }

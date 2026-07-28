@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Added compatibility with Genkit 0.15, GenUI 0.10, and the extracted
+  `a2ui_core` message types.
+- Upgraded the hybrid and backend examples to `genkit_llamadart` 1.4.0 and the
+  current compatible Genkit, provider, server, llamadart, and GenUI packages.
+- Raised the hybrid example's macOS deployment target to 14.0, adopted
+  Flutter's Swift Package Manager integration, and made its macOS integration
+  smoke run automatically for relevant pull requests and pushes to `main`.
+- Moved the opt-in LiteRT-LM device smoke and GenUI benchmark out of
+  `integration_test` so default integration runs do not launch their
+  heavyweight targets.
+
 ## 0.1.1 - 2026-06-07
 
 - Added GitHub Actions CI and tag-driven pub.dev release workflow automation.

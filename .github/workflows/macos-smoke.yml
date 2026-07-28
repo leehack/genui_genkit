@@ -1,6 +1,20 @@
 name: macOS Integration Smoke
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/macos-smoke.yml"
+      - "example/flutter_hybrid_genui/**"
+      - "lib/**"
+      - "pubspec.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/macos-smoke.yml"
+      - "example/flutter_hybrid_genui/**"
+      - "lib/**"
+      - "pubspec.yaml"
   workflow_dispatch:
 
 permissions:
