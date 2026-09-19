@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Select package and example CI checks by their dependencies while retaining
+  package publication checks and full validation for shared or unknown inputs.
+
 ## 0.2.0 - 2026-07-28
 
 - Added guarded release-preparation automation that tags the exact merged
