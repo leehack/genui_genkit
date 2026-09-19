@@ -119,7 +119,7 @@ Future<_ModelBenchmarkResult> _runModel(
       debugPrint('GENUI_QUALITY ${jsonEncode(payload)}', wrapWidth: 1024);
     });
     final entry = await controller.start(source);
-    return _runInference(
+    return await _runInference(
       model,
       entry.filePath,
       systemPrompt,
