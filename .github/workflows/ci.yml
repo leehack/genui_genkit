@@ -23,6 +23,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Select checks
+        id: changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 -B -m unittest discover -s .github -p "test_select_ci.py"
+          python3 .github/select_ci.py
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -37,12 +49,15 @@ jobs:
         run: flutter pub get
 
       - name: Check formatting
+        if: steps.changes.outputs.package == 'true'
         run: dart format --output=none --set-exit-if-changed lib test example/main.dart
 
       - name: Analyze
+        if: steps.changes.outputs.package == 'true'
         run: flutter analyze lib test example/main.dart
 
       - name: Test
+        if: steps.changes.outputs.package == 'true'
         run: flutter test
 
       - name: Publish dry run
@@ -66,20 +81,35 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Select checks
+        id: changes
+        working-directory: ${{ github.workspace }}
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 .github/select_ci.py
 
       - name: Setup Flutter
+        if: steps.changes.outputs.flutter == 'true'
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
       - name: Install dependencies
+        if: steps.changes.outputs.flutter == 'true'
         run: flutter pub get
 
       - name: Analyze
+        if: steps.changes.outputs.flutter == 'true'
         run: flutter analyze
 
       - name: Test
+        if: steps.changes.outputs.flutter == 'true'
         run: flutter test
 
   backend-example:
@@ -94,18 +124,33 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Select checks
+        id: changes
+        working-directory: ${{ github.workspace }}
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 .github/select_ci.py
 
       - name: Setup Flutter
+        if: steps.changes.outputs.backend == 'true'
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
       - name: Install dependencies
+        if: steps.changes.outputs.backend == 'true'
         run: flutter pub get
 
       - name: Analyze
+        if: steps.changes.outputs.backend == 'true'
         run: dart analyze
 
       - name: Test
+        if: steps.changes.outputs.backend == 'true'
         run: dart test

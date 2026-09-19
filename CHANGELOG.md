@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Select package and example CI checks by their dependencies while retaining
+  package publication checks and full validation for shared or unknown inputs.
+- Keep analyzer configuration stable during current Flutter dependency setup and
+  await benchmark inference before disposing its download controller.
+
 ## 0.2.0 - 2026-07-28
 
 - Added guarded release-preparation automation that tags the exact merged
