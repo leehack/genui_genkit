@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+- Breaking: move from `genui` to the A2UI Dart SDKs that replace it,
+  `a2ui_core`, `a2ui_flutter` and `a2ui_agent`. Sessions still speak A2UI
+  v0.9.
+  - `GenkitGenUiSession` takes `a2ui_flutter` `CatalogImplementation`s instead
+    of genui `Catalog`s, and `catalogs` returns them.
+  - `GenkitGenUiSession.processor`, an `a2ui_core` `MessageProcessor`,
+    replaces `surfaceController`.
+  - `GenUiSystemPromptBuilder` receives `CatalogImplementation`s, and
+    `GenUiSystemPromptOptions.clientDataModel` is a `Map<String, Object?>`.
+  - `SurfaceOperations` and `TechnicalPossibilities` are now part of this
+    package, with the same constructors and fields.
+  - `ChatMessage` and `ChatMessageRole`, used by `GenUiTurnRequest` and the
+    Genkit message helpers, come from `genai_primitives`, which `genui`
+    re-exported. Remote backends receive the same JSON as before.
+  - `defaultGenUiSystemPromptBuilder` and `compactGenUiSystemPromptBuilder`
+    take the A2UI output rules and schemas from `a2ui_agent`, which ask the
+    model for JSON arrays in `<a2ui-json>` blocks instead of markdown-fenced
+    JSON. Sessions read both forms and repair them as before.
+  - Each A2UI message is checked against the catalog before it is applied,
+    and a message that fails is rejected and reported to the backend. `genui`
+    applied invalid components before reporting them, accepted unknown
+    catalog ids, and held an `updateDataModel` for a surface that did not
+    exist yet until the surface was created.
+  - `GenUiMessageView` renders surfaces with `A2uiSurface` and still renders
+    Markdown in Text components.
+- Update the hybrid example to `a2ui_flutter`. Its components accept
+  properties their schemas do not list, as genui's `CatalogItem` did.
 - Select package and example CI checks by their dependencies while retaining
   package publication checks and full validation for shared or unknown inputs.
 - Keep analyzer configuration stable during current Flutter dependency setup and

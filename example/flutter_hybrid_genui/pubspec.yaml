@@ -6,13 +6,13 @@ environment:
   sdk: ^3.10.7
 
 dependencies:
-  a2ui_core: ^0.1.0
+  a2ui_core: ^0.6.0
+  a2ui_flutter: ^0.2.0
   flutter:
     sdk: flutter
   genkit: ^0.15.1
   genkit_google_genai: ^0.2.12
   genkit_llamadart: ^1.4.0
-  genui: ^0.10.1
   genui_genkit:
     path: ../..
   json_schema_builder: ^0.1.6
@@ -23,6 +23,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  genai_primitives: ^0.2.3
   integration_test:
     sdk: flutter
   lints: ^6.0.0

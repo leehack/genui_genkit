@@ -89,18 +89,14 @@ void main() {
       await session.sendText(_prompt).timeout(const Duration(minutes: 10));
       turnStopwatch.stop();
 
-      final surfaceIds = session.surfaceController.activeSurfaceIds.toList();
+      final surfaces = session.processor.model.allSurfaces.toList();
+      final surfaceIds = surfaces.map((surface) => surface.id).toList();
       final visibleTypes = <String>{};
       var hasRoot = false;
-      for (final surfaceId in surfaceIds) {
-        final definition = session.surfaceController.registry.getSurface(
-          surfaceId,
-        );
-        if (definition == null) continue;
-        hasRoot = hasRoot || definition.components.containsKey('root');
-        visibleTypes.addAll(
-          definition.components.values.map((component) => component.type),
-        );
+      for (final surface in surfaces) {
+        final components = surface.componentsModel;
+        hasRoot = hasRoot || components.get('root') != null;
+        visibleTypes.addAll(components.all.map((component) => component.type));
       }
 
       final result = {

@@ -1,4 +1,4 @@
-import 'package:genui/genui.dart';
+import 'package:a2ui_flutter/a2ui_flutter.dart';
 import 'package:genui_genkit/genui_genkit.dart';
 
 Future<void> main() async {
@@ -6,7 +6,10 @@ Future<void> main() async {
     backend: LocalGenkitBackend(
       generate: (request) => Stream.value('Hello ${request.message.text}'),
     ),
-    catalog: const Catalog([], catalogId: 'dev.example.app.v1'),
+    catalog: CatalogImplementation(
+      id: 'dev.example.app.v1',
+      components: const [],
+    ),
   );
 
   await session.sendText('GenUI');

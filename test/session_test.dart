@@ -1,14 +1,15 @@
 import 'dart:async';
 
+import 'package:a2ui_flutter/a2ui_flutter.dart';
+import 'package:a2ui_flutter/v0_9/basic_catalog.dart' as v0_9;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:genui/genui.dart';
 import 'package:genui_genkit/genui_genkit.dart';
 
 void main() {
   test('session records user and streamed assistant text', () async {
     final session = GenkitGenUiSession(
       backend: LocalGenkitBackend(generate: (_) => Stream.value('ack')),
-      catalog: const Catalog([], catalogId: 'test.catalog'),
+      catalog: CatalogImplementation(id: 'test.catalog', components: const []),
     );
 
     await session.sendText('hello');
@@ -25,7 +26,7 @@ void main() {
       backend: LocalGenkitBackend(
         generate: (_) => Stream<String>.fromIterable(['a', 'b']),
       ),
-      catalog: const Catalog([], catalogId: 'test.catalog'),
+      catalog: CatalogImplementation(id: 'test.catalog', components: const []),
     );
 
     final raw = <String>[];
@@ -39,13 +40,13 @@ void main() {
   });
 
   test(
-    'session forwards parsed A2UI messages to the surface controller',
+    'session forwards parsed A2UI messages to the message processor',
     () async {
-      final catalog = BasicCatalogItems.asCatalog();
+      final catalog = v0_9.basicCatalog();
       final session = GenkitGenUiSession(
         backend: LocalGenkitBackend(
           generate: (_) => Stream<String>.fromIterable(
-            _surfaceStream(catalog.catalogId!, includeVersion: true),
+            _surfaceStream(catalog.id, includeVersion: true),
           ),
         ),
         catalog: catalog,
@@ -65,11 +66,11 @@ void main() {
   test(
     'session repairs A2UI messages that omit the top-level version',
     () async {
-      final catalog = BasicCatalogItems.asCatalog();
+      final catalog = v0_9.basicCatalog();
       final session = GenkitGenUiSession(
         backend: LocalGenkitBackend(
           generate: (_) => Stream<String>.fromIterable(
-            _surfaceStream(catalog.catalogId!, includeVersion: false),
+            _surfaceStream(catalog.id, includeVersion: false),
           ),
         ),
         catalog: catalog,
@@ -96,12 +97,12 @@ void main() {
   test(
     'session repairs nested component objects before rendering a surface',
     () async {
-      final catalog = BasicCatalogItems.asCatalog();
+      final catalog = v0_9.basicCatalog();
       final session = GenkitGenUiSession(
         backend: LocalGenkitBackend(
           generate: (_) => Stream<String>.fromIterable(
             _surfaceStream(
-              catalog.catalogId!,
+              catalog.id,
               includeVersion: false,
               nestedComponent: true,
             ),
@@ -131,7 +132,7 @@ void main() {
   test(
     'session renders updateComponents-only output with an unclosed fence',
     () async {
-      final catalog = BasicCatalogItems.asCatalog();
+      final catalog = v0_9.basicCatalog();
       final session = GenkitGenUiSession(
         backend: LocalGenkitBackend(
           generate: (_) => Stream<String>.value('''
@@ -175,7 +176,7 @@ void main() {
   test(
     'session repairs combined A2UI messages and missing root component',
     () async {
-      final catalog = BasicCatalogItems.asCatalog();
+      final catalog = v0_9.basicCatalog();
       final session = GenkitGenUiSession(
         backend: LocalGenkitBackend(
           generate: (_) => Stream<String>.value('''
@@ -183,7 +184,7 @@ void main() {
 {
   "createSurface": {
     "surfaceId": "s1",
-    "catalogId": "${catalog.catalogId}"
+    "catalogId": "${catalog.id}"
   },
   "updateComponents": {
     "surfaceId": "s1",
@@ -227,7 +228,10 @@ void main() {
         backend: LocalGenkitBackend(
           generate: (_) => Stream<String>.fromIterable(['hello', ' ', 'world']),
         ),
-        catalog: const Catalog([], catalogId: 'test.catalog'),
+        catalog: CatalogImplementation(
+          id: 'test.catalog',
+          components: const [],
+        ),
       );
 
       await session.sendText('go');
@@ -248,7 +252,10 @@ void main() {
             return Stream.value('response ${requests.length}');
           },
         ),
-        catalog: const Catalog([], catalogId: 'test.catalog'),
+        catalog: CatalogImplementation(
+          id: 'test.catalog',
+          components: const [],
+        ),
       );
 
       await session.sendText('first');
@@ -277,7 +284,7 @@ void main() {
           return Stream.value('ack');
         },
       ),
-      catalog: const Catalog([], catalogId: 'test.catalog'),
+      catalog: CatalogImplementation(id: 'test.catalog', components: const []),
       metadata: const {'app': 'test'},
       metadataBuilder: () => {'route': route},
     );
@@ -302,7 +309,7 @@ void main() {
           return Stream.value('response $responseIndex');
         },
       ),
-      catalog: const Catalog([], catalogId: 'test.catalog'),
+      catalog: CatalogImplementation(id: 'test.catalog', components: const []),
     );
 
     await session.sendText('first');
@@ -327,7 +334,7 @@ void main() {
           return controller.stream;
         },
       ),
-      catalog: const Catalog([], catalogId: 'test.catalog'),
+      catalog: CatalogImplementation(id: 'test.catalog', components: const []),
     );
 
     final first = session.sendText('first');
@@ -353,7 +360,10 @@ void main() {
       final controller = StreamController<String>();
       final session = GenkitGenUiSession(
         backend: LocalGenkitBackend(generate: (_) => controller.stream),
-        catalog: const Catalog([], catalogId: 'test.catalog'),
+        catalog: CatalogImplementation(
+          id: 'test.catalog',
+          components: const [],
+        ),
       );
 
       final send = session.sendText('first');
@@ -377,14 +387,14 @@ void main() {
         },
       ),
       catalogs: [
-        const Catalog([], catalogId: 'first.catalog'),
-        const Catalog([], catalogId: 'second.catalog'),
+        CatalogImplementation(id: 'first.catalog', components: const []),
+        CatalogImplementation(id: 'second.catalog', components: const []),
       ],
     );
 
     await session.sendText('hello');
 
-    expect(session.catalogs.map((catalog) => catalog.catalogId), [
+    expect(session.catalogs.map((catalog) => catalog.id), [
       'first.catalog',
       'second.catalog',
     ]);
@@ -398,11 +408,11 @@ void main() {
   test(
     'session removes surface chat entries when a surface is deleted',
     () async {
-      final catalog = BasicCatalogItems.asCatalog();
+      final catalog = v0_9.basicCatalog();
       final session = GenkitGenUiSession(
         backend: LocalGenkitBackend(
           generate: (_) => Stream<String>.fromIterable([
-            ..._surfaceStream(catalog.catalogId!, includeVersion: true),
+            ..._surfaceStream(catalog.id, includeVersion: true),
             '\n```json\n',
             '{"version":"v0.9","deleteSurface":{"surfaceId":"s1"}}',
             '\n```',
@@ -445,7 +455,10 @@ void main() {
             cancelCalled = true;
           },
         ),
-        catalog: const Catalog([], catalogId: 'test.catalog'),
+        catalog: CatalogImplementation(
+          id: 'test.catalog',
+          components: const [],
+        ),
       );
 
       final firstSend = session.sendText('first');
@@ -468,6 +481,71 @@ void main() {
       session.dispose();
     },
   );
+
+  test('session renders A2UI messages written in a2ui-json blocks', () async {
+    final catalog = v0_9.basicCatalog();
+    final requests = <GenUiTurnRequest>[];
+    final session = GenkitGenUiSession(
+      backend: LocalGenkitBackend(
+        generate: (request) {
+          requests.add(request);
+          return Stream<String>.value('''
+Here is your UI.
+<a2ui-json>
+[
+  {"version": "v0.9", "createSurface": {"surfaceId": "s1", "catalogId": "${catalog.id}"}},
+  {"version": "v0.9", "updateComponents": {"surfaceId": "s1", "components": [
+    {"id": "root", "component": "Text", "text": "hello"}
+  ]}}
+]
+</a2ui-json>
+''');
+        },
+      ),
+      catalog: catalog,
+    );
+
+    await session.sendText('go');
+    await _waitForSurface(session, 's1');
+    await Future<void>.delayed(Duration.zero);
+
+    expect(
+      session.messages.map((message) => message.surfaceId ?? message.text),
+      ['go', 'Here is your UI.', 's1'],
+    );
+    expect(requests, hasLength(1));
+    session.dispose();
+  });
+
+  test('session sends A2UI errors to the backend as a new turn', () async {
+    final requests = <GenUiTurnRequest>[];
+    final session = GenkitGenUiSession(
+      backend: LocalGenkitBackend(
+        generate: (request) {
+          requests.add(request);
+          if (requests.length > 1) return Stream.value('ack');
+          return Stream<String>.value(
+            '```json\n'
+            '{"version":"v0.9","createSurface":'
+            '{"surfaceId":"s1","catalogId":"unknown.catalog"}}\n'
+            '```',
+          );
+        },
+      ),
+      catalog: CatalogImplementation(id: 'test.catalog', components: const []),
+    );
+
+    await session.sendText('go');
+    for (var i = 0; i < 100 && requests.length < 2; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+
+    expect(requests, hasLength(2));
+    final text = defaultGenkitMessageText(requests.last.message);
+    expect(text, startsWith('User interacted with generated UI: '));
+    expect(text, contains('CATALOG_NOT_FOUND'));
+    session.dispose();
+  });
 }
 
 List<String> _surfaceStream(

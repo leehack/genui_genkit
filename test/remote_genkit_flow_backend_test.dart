@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:genui/genui.dart';
+import 'package:genai_primitives/genai_primitives.dart';
 import 'package:genui_genkit/genui_genkit.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';

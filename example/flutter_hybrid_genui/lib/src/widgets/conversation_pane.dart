@@ -1,5 +1,6 @@
+import 'package:a2ui_core/a2ui_core.dart';
+import 'package:a2ui_flutter/a2ui_flutter.dart';
 import 'package:flutter/material.dart';
-import 'package:genui/genui.dart';
 import 'package:genui_genkit/genui_genkit.dart';
 
 import 'message_bubble.dart';
@@ -9,14 +10,14 @@ class ConversationPane extends StatelessWidget {
     super.key,
     required this.controller,
     required this.messages,
-    required this.surfaceController,
+    required this.processor,
     required this.isProcessing,
     required this.surfaceKeys,
   });
 
   final ScrollController controller;
   final List<GenUiChatEntry> messages;
-  final SurfaceController surfaceController;
+  final MessageProcessor<ComponentImplementation> processor;
   final bool isProcessing;
   final Map<String, GlobalKey> surfaceKeys;
 
@@ -47,7 +48,7 @@ class ConversationPane extends StatelessWidget {
                         ? null
                         : surfaceKeys[messages[index].surfaceId!],
                     message: messages[index],
-                    surfaceController: surfaceController,
+                    processor: processor,
                   );
                 },
               ),

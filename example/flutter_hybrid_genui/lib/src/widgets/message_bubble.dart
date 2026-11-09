@@ -1,20 +1,22 @@
+import 'package:a2ui_core/a2ui_core.dart';
+import 'package:a2ui_flutter/a2ui_flutter.dart';
 import 'package:flutter/material.dart';
-import 'package:genui/genui.dart';
 import 'package:genui_genkit/genui_genkit.dart';
 
 class MessageBubble extends StatelessWidget {
   const MessageBubble({
     super.key,
     required this.message,
-    required this.surfaceController,
+    required this.processor,
   });
 
   final GenUiChatEntry message;
-  final SurfaceController surfaceController;
+  final MessageProcessor<ComponentImplementation> processor;
 
   @override
   Widget build(BuildContext context) {
     if (message.surfaceId != null) {
+      final surface = processor.model.getSurface(message.surfaceId!);
       final colorScheme = Theme.of(context).colorScheme;
       return Align(
         alignment: Alignment.centerLeft,
@@ -35,12 +37,9 @@ class MessageBubble extends StatelessWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: Surface(
-                surfaceContext: surfaceController.contextFor(
-                  message.surfaceId!,
-                ),
-                defaultBuilder: (_) => const SizedBox.shrink(),
-              ),
+              child: surface == null
+                  ? const SizedBox.shrink()
+                  : A2uiSurface(key: ObjectKey(surface), surface: surface),
             ),
           ),
         ),

@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:a2ui_core/a2ui_core.dart'
-    show A2uiMessage, CreateSurfaceMessage, UpdateComponentsMessage;
+import 'package:a2ui_agent/a2ui_agent.dart' show DirectJsonPromptGenerator;
+import 'package:a2ui_core/a2ui_core.dart';
+import 'package:a2ui_flutter/a2ui_flutter.dart';
 import 'package:flutter/foundation.dart';
-import 'package:genui/genui.dart';
+import 'package:genai_primitives/genai_primitives.dart';
 
 import 'a2ui_stream_repairer.dart';
 import 'backend.dart';
+import 'json_block_parser.dart';
+import 'prompt_options.dart';
+import 'ui_interaction.dart';
 
 /// Message rendered by a host chat UI.
 final class GenUiChatEntry {
@@ -58,7 +62,10 @@ final class GenUiChatEntry {
 
 /// Builds the system prompt used for a turn.
 typedef GenUiSystemPromptBuilder =
-    String Function(List<Catalog> catalogs, GenUiSystemPromptOptions options);
+    String Function(
+      List<CatalogImplementation> catalogs,
+      GenUiSystemPromptOptions options,
+    );
 
 /// Supplies app metadata for each outgoing turn.
 typedef GenUiMetadataBuilder = Map<String, Object?> Function();
@@ -80,7 +87,7 @@ final class GenUiSystemPromptOptions {
   final Iterable<String> systemPromptFragments;
 
   /// Optional client-side data model exposed to the model.
-  final JsonMap? clientDataModel;
+  final Map<String, Object?>? clientDataModel;
 
   /// Technical capabilities exposed to the model.
   final TechnicalPossibilities technicalPossibilities;
@@ -88,38 +95,39 @@ final class GenUiSystemPromptOptions {
 
 /// Builds the default GenUI system prompt for the provided catalogs.
 String defaultGenUiSystemPromptBuilder(
-  List<Catalog> catalogs,
+  List<CatalogImplementation> catalogs,
   GenUiSystemPromptOptions options,
 ) {
-  final catalogIds = catalogs
-      .map((catalog) => catalog.catalogId)
-      .whereType<String>()
-      .join(', ');
+  final catalogIds = catalogs.map((catalog) => catalog.id).join(', ');
+  final surfaceOperations =
+      options.surfaceOperations ??
+      SurfaceOperations.createOnly(dataModel: false);
   final baseFragments = [
     'You are a helpful assistant that can generate interactive UI for the user.',
     if (catalogIds.isNotEmpty)
       'The available catalogIds are: $catalogIds. Do not invent URL-like catalog IDs.',
-    'When you create a UI, output both required A2UI JSON blocks: first createSurface, then updateComponents for the same surfaceId. Every A2UI JSON block must include top-level "version": "v0.9". The updateComponents message must include a component with id "root" using one of the catalog components.',
+    'When you create a UI, output both required A2UI messages: first createSurface, then updateComponents for the same surfaceId. Every A2UI message must include top-level "version": "v0.9". The updateComponents message must include a component with id "root" using one of the catalog components.',
     'Each updateComponents entry must be a flat component definition, for example { "id": "root", "component": "ActivityCard", ...properties }. The "component" value is the component name string; never nest a component object inside the "component" field.',
     'Only the component with id "root" is rendered as the surface entry point. If multiple components should be visible, the root component must reference the other component ids using a property supported by its schema.',
     'For layout components, children must be an array of component id strings, never inline component objects.',
     ...options.systemPromptFragments,
-    PromptFragments.acknowledgeUser(),
-    PromptFragments.uiGenerationRestriction(
-      prefix: PromptBuilder.defaultImportancePrefix,
-    ),
+    _acknowledgeUser,
+    _uiGenerationRestriction,
   ];
   return catalogs
       .map(
-        (catalog) => PromptBuilder.custom(
-          catalog: catalog,
-          allowedOperations:
-              options.surfaceOperations ??
-              SurfaceOperations.createOnly(dataModel: false),
-          systemPromptFragments: baseFragments,
-          clientDataModel: options.clientDataModel,
-          technicalPossibilities: options.technicalPossibilities,
-        ).systemPromptJoined(),
+        (catalog) => [
+          ...baseFragments,
+          'The active catalog ID is: "${catalog.id}". You must use this catalog ID when creating surfaces.',
+          ...options.technicalPossibilities.systemPromptFragment(),
+          if (!surfaceOperations.update)
+            'IMPORTANT: DO NOT update or modify surfaces created in previous turns. If the UI needs to change, you MUST create a NEW surface with a new unique `surfaceId`. You may only use `updateComponents` to populate the components of a freshly created surface.',
+          if (surfaceOperations.update)
+            'To update an existing UI, output an `updateComponents` message with the existing `surfaceId` and the new component definitions.',
+          _a2uiPromptSnippet(catalog, surfaceOperations),
+          if (options.clientDataModel case final clientDataModel?)
+            'Client Data Model:\n${const JsonEncoder.withIndent('  ').convert(clientDataModel)}',
+        ].map((fragment) => '${fragment.trim()}\n').join('\n-------------------------------------\n\n'),
       )
       .join('\n\n=====================================\n\n');
 }
@@ -130,13 +138,10 @@ String defaultGenUiSystemPromptBuilder(
 /// the more verbose default prompt prose. It is useful for mobile providers
 /// where prompt evaluation dominates perceived latency.
 String compactGenUiSystemPromptBuilder(
-  List<Catalog> catalogs,
+  List<CatalogImplementation> catalogs,
   GenUiSystemPromptOptions options,
 ) {
-  final catalogIds = catalogs
-      .map((catalog) => catalog.catalogId)
-      .whereType<String>()
-      .join(', ');
+  final catalogIds = catalogs.map((catalog) => catalog.id).join(', ');
   final surfaceOperations =
       options.surfaceOperations ??
       SurfaceOperations.createOnly(dataModel: false);
@@ -144,13 +149,11 @@ String compactGenUiSystemPromptBuilder(
     'You generate compact interactive Flutter UI using A2UI.',
     if (catalogIds.isNotEmpty)
       'Use only these catalogIds: $catalogIds. Do not invent catalog IDs.',
-    'When UI is useful, output separate fenced JSON blocks in this order: createSurface, then updateComponents for the same surfaceId. Never combine operations in one JSON object. Every block needs "version":"v0.9".',
+    'When UI is useful, output A2UI messages in this order: createSurface, then updateComponents for the same surfaceId. Never combine operations in one JSON object. Every message needs "version":"v0.9".',
     'updateComponents must include one visible root component with "id":"root". Components are flat objects like {"id":"root","component":"ActivityCard",...}. The component value is a string. For multiple visible widgets, use root Column with children as component id strings.',
     ...options.systemPromptFragments,
-    PromptFragments.acknowledgeUser(),
-    PromptFragments.uiGenerationRestriction(
-      prefix: PromptBuilder.defaultImportancePrefix,
-    ),
+    _acknowledgeUser,
+    _uiGenerationRestriction,
     ...options.technicalPossibilities.systemPromptFragment(),
     if (!surfaceOperations.update)
       'Do not update previous surfaces. Create a new surface with a new surfaceId when UI changes.',
@@ -164,11 +167,9 @@ String compactGenUiSystemPromptBuilder(
 
   return catalogs
       .map((catalog) {
-        final schema = a2uiMessageSchema(catalog).toJson();
         return [
           ...baseFragments,
-          ...catalog.systemPromptFragments,
-          'A2UI JSON schema:\n```json\n$schema\n```',
+          _a2uiPromptSnippet(catalog, surfaceOperations),
           if (options.clientDataModel != null)
             'Client Data Model:\n${jsonEncode(options.clientDataModel)}',
           'The schema above is reference material only. Do not copy, summarize, or explain it. For the user request, emit only the requested acknowledgement and A2UI JSON blocks.',
@@ -177,13 +178,32 @@ String compactGenUiSystemPromptBuilder(
       .join('\n\n=====================================\n\n');
 }
 
+const _acknowledgeUser =
+    'Your responses should contain acknowledgment of the user message.';
+
+const _uiGenerationRestriction =
+    'IMPORTANT: Do not use tools or function calls for UI generation. '
+    'Use JSON text blocks.';
+
+/// The A2UI output rules and the JSON schemas of the messages [operations]
+/// allow, the common types and [catalog], as `package:a2ui_agent` writes them
+/// for the direct JSON format.
+String _a2uiPromptSnippet(
+  CatalogImplementation catalog,
+  SurfaceOperations operations,
+) {
+  return DirectJsonPromptGenerator([
+    catalog,
+  ], allowedMessages: operations.allowedMessages).generate();
+}
+
 /// High-level session that bridges GenUI transport events to a backend.
 final class GenkitGenUiSession extends ChangeNotifier {
   /// Creates a session backed by [backend] and one or more GenUI catalogs.
   GenkitGenUiSession({
     required GenUiBackend backend,
-    Catalog? catalog,
-    List<Catalog>? catalogs,
+    CatalogImplementation? catalog,
+    List<CatalogImplementation>? catalogs,
     GenUiSystemPromptBuilder systemPromptBuilder =
         defaultGenUiSystemPromptBuilder,
     GenUiSystemPromptOptions systemPromptOptions =
@@ -196,31 +216,38 @@ final class GenkitGenUiSession extends ChangeNotifier {
        _systemPromptOptions = systemPromptOptions,
        _metadata = metadata,
        _metadataBuilder = metadataBuilder {
-    _surfaceController = SurfaceController(catalogs: _catalogs);
-    _transport = A2uiTransportAdapter(onSend: _sendToBackend);
-    _surfaceSubscription = _surfaceController.surfaceUpdates.listen(
-      _handleSurfaceUpdate,
-      onError: _addError,
+    _processor = MessageProcessor<ComponentImplementation>(
+      catalogs: _catalogs,
+      // A reply can build a surface over several messages, which the strict
+      // checks would reject.
+      validationConfig: ValidationConfig.relaxed,
+      reportErrorsOnly: true,
     );
-    _submitSubscription = _surfaceController.onSubmit.listen((message) {
-      if (!_disposed) {
-        unawaited(_transport.sendRequest(message));
-      }
-    }, onError: _addError);
+    _processorSubscriptions = [
+      _processor.model.onSurfaceDeleted.subscribe(_handleSurfaceDeleted),
+      _processor.model.onAction.subscribe(
+        (action) => _sendInteraction(
+          ActionMessage(version: _versionOf(action.surfaceId), action: action),
+        ),
+      ),
+      _processor.model.onError.subscribe(
+        (error) => _sendInteraction(
+          ErrorMessage(version: _versionOf(error.surfaceId), error: error),
+        ),
+      ),
+    ];
   }
 
   final GenUiBackend _backend;
-  final List<Catalog> _catalogs;
+  final List<CatalogImplementation> _catalogs;
   final GenUiSystemPromptBuilder _systemPromptBuilder;
   final GenUiSystemPromptOptions _systemPromptOptions;
   final Map<String, Object?> _metadata;
   final GenUiMetadataBuilder? _metadataBuilder;
 
-  late final SurfaceController _surfaceController;
-  late final A2uiTransportAdapter _transport;
+  late final MessageProcessor<ComponentImplementation> _processor;
 
-  late final StreamSubscription<SurfaceUpdate> _surfaceSubscription;
-  late final StreamSubscription<ChatMessage> _submitSubscription;
+  late final List<Subscription> _processorSubscriptions;
   StreamSubscription<GenUiBackendEvent>? _activeBackendSubscription;
   Completer<void>? _activeTurnCompleter;
 
@@ -234,16 +261,16 @@ final class GenkitGenUiSession extends ChangeNotifier {
   var _activeTurnCancelled = false;
   int? _currentAssistantTextIndex;
 
-  /// Controller that owns generated GenUI surfaces for this session.
-  SurfaceController get surfaceController => _surfaceController;
+  /// Message processor that owns generated A2UI surfaces for this session.
+  MessageProcessor<ComponentImplementation> get processor => _processor;
 
   /// Catalogs available to generated A2UI messages.
-  List<Catalog> get catalogs => List.unmodifiable(_catalogs);
+  List<CatalogImplementation> get catalogs => List.unmodifiable(_catalogs);
 
   /// Raw text chunks emitted by the backend before A2UI parsing.
   Stream<String> get rawText => _rawTextController.stream;
 
-  /// Errors reported by the backend, parser, or surface controller.
+  /// Errors reported by the backend or the A2UI message parser.
   Stream<Object> get errors => _errorController.stream;
 
   /// Chat entries suitable for rendering in a host chat UI.
@@ -288,7 +315,32 @@ final class GenkitGenUiSession extends ChangeNotifier {
     _currentAssistantTextIndex = null;
     _notifyIfAlive();
 
-    await _transport.sendRequest(ChatMessage.user(trimmed));
+    await _sendToBackend(ChatMessage.user(trimmed));
+  }
+
+  /// Sends [message], an action or error from a generated surface, to the
+  /// backend as a new turn.
+  ///
+  /// The processor reports some errors while the turn that caused them is
+  /// still being handled, so the message is sent in a microtask, once that
+  /// turn has finished.
+  void _sendInteraction(RendererToAgentMessage message) {
+    final interaction = jsonEncode(message.toJson());
+    scheduleMicrotask(() {
+      if (_disposed) return;
+      unawaited(
+        _sendToBackend(
+          ChatMessage.user('', parts: [uiInteractionPart(interaction)]),
+        ),
+      );
+    });
+  }
+
+  String _versionOf(String? surfaceId) {
+    final surface = surfaceId == null
+        ? null
+        : _processor.model.getSurface(surfaceId);
+    return surface?.protocolVersion ?? A2uiProtocolVersion.v0_9.jsonValue;
   }
 
   Future<void> _sendToBackend(ChatMessage message) async {
@@ -367,15 +419,15 @@ final class GenkitGenUiSession extends ChangeNotifier {
       return;
     }
 
-    final repaired = repairCompleteA2uiText(output);
+    final repaired = repairCompleteA2uiText(fenceA2uiJsonBlocks(output));
 
-    final messages = <A2uiMessage>[];
+    final messages = <AgentToRendererMessage>[];
     var containsA2ui = false;
     for (final block in JsonBlockParser.parseJsonBlocks(repaired)) {
       for (final json in _a2uiJsonMapsFrom(block)) {
         containsA2ui = true;
         try {
-          messages.add(A2uiMessage.fromJson(json));
+          messages.add(AgentToRendererMessage.fromJson(json));
         } catch (error, stackTrace) {
           _addError(error, stackTrace);
         }
@@ -394,19 +446,32 @@ final class GenkitGenUiSession extends ChangeNotifier {
     }
   }
 
-  void _handleA2uiMessage(A2uiMessage message) {
+  void _handleA2uiMessage(AgentToRendererMessage message) {
     if (message case UpdateComponentsMessage(
       :final surfaceId,
-    ) when !_surfaceController.registry.hasSurface(surfaceId)) {
+      :final version,
+    ) when _processor.model.getSurface(surfaceId) == null) {
       final catalogId = _defaultCatalogId();
       if (catalogId != null) {
-        _surfaceController.handleMessage(
-          CreateSurfaceMessage(surfaceId: surfaceId, catalogId: catalogId),
+        _processor.processMessages(
+          CreateSurfaceMessage(
+            version: version,
+            surfaceId: surfaceId,
+            catalogId: catalogId,
+          ),
         );
       }
     }
 
-    _surfaceController.handleMessage(message);
+    _processor.processMessages(message);
+
+    if (message case UpdateComponentsMessage(:final surfaceId)) {
+      final surface = _processor.model.getSurface(surfaceId);
+      _ensureSurfaceMessage(
+        surfaceId,
+        hasVisibleRoot: surface?.componentsModel.get('root') != null,
+      );
+    }
   }
 
   void _appendAssistantText(String chunk) {
@@ -421,20 +486,10 @@ final class GenkitGenUiSession extends ChangeNotifier {
     _notifyIfAlive();
   }
 
-  void _handleSurfaceUpdate(SurfaceUpdate update) {
+  void _handleSurfaceDeleted(String surfaceId) {
     if (_disposed) return;
-    switch (update) {
-      case SurfaceAdded():
-        break;
-      case SurfaceRemoved(:final surfaceId):
-        _messages.removeWhere((entry) => entry.surfaceId == surfaceId);
-        _notifyIfAlive();
-      case ComponentsUpdated(:final surfaceId, :final definition):
-        _ensureSurfaceMessage(
-          surfaceId,
-          hasVisibleRoot: definition.components.containsKey('root'),
-        );
-    }
+    _messages.removeWhere((entry) => entry.surfaceId == surfaceId);
+    _notifyIfAlive();
   }
 
   void _ensureSurfaceMessage(String surfaceId, {required bool hasVisibleRoot}) {
@@ -465,7 +520,7 @@ final class GenkitGenUiSession extends ChangeNotifier {
       message: message,
       history: List.unmodifiable(_history),
       systemPrompt: _systemPromptBuilder(_catalogs, _systemPromptOptions),
-      catalogId: _catalogs.first.catalogId,
+      catalogId: _catalogs.first.id,
       metadata: _metadataForTurn(),
     );
   }
@@ -483,9 +538,8 @@ final class GenkitGenUiSession extends ChangeNotifier {
 
   String? _defaultCatalogId() {
     for (final catalog in _catalogs) {
-      final catalogId = catalog.catalogId;
-      if (catalogId != null && catalogId.isNotEmpty) {
-        return catalogId;
+      if (catalog.id.isNotEmpty) {
+        return catalog.id;
       }
     }
     return null;
@@ -501,10 +555,10 @@ final class GenkitGenUiSession extends ChangeNotifier {
     }
     unawaited(_activeBackendSubscription?.cancel());
     unawaited(Future<void>.sync(_backend.cancelActiveTurn));
-    unawaited(_surfaceSubscription.cancel());
-    unawaited(_submitSubscription.cancel());
-    _transport.dispose();
-    _surfaceController.dispose();
+    for (final subscription in _processorSubscriptions) {
+      subscription.unsubscribe();
+    }
+    _processor.dispose();
     unawaited(Future<void>.sync(_backend.dispose));
     unawaited(_rawTextController.close());
     unawaited(_errorController.close());
@@ -512,7 +566,10 @@ final class GenkitGenUiSession extends ChangeNotifier {
   }
 }
 
-List<Catalog> _normalizeCatalogs({Catalog? catalog, List<Catalog>? catalogs}) {
+List<CatalogImplementation> _normalizeCatalogs({
+  CatalogImplementation? catalog,
+  List<CatalogImplementation>? catalogs,
+}) {
   final normalized = [?catalog, ...?catalogs];
   if (normalized.isEmpty) {
     throw ArgumentError('GenkitGenUiSession requires at least one catalog.');
