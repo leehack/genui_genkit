@@ -4,14 +4,15 @@ Build Flutter GenUI apps that can stream generated UI from any Genkit-backed
 model: on-device llamadart, direct hosted providers, backend-hosted Genkit
 flows, or a hybrid mix of all three.
 
-> Experimental: Flutter `genui` is experimental and its APIs may change.
+> Experimental: the A2UI Dart SDKs (`a2ui_core`, `a2ui_flutter` and
+> `a2ui_agent`) are experimental and their APIs may change.
 
 ## What This Package Provides
 
-Genkit is good at connecting to AI providers. Flutter GenUI is good at safely
-rendering app-owned UI components from A2UI messages. This package connects those
-two pieces so app developers can focus on catalog design, routing policy, and
-product UX instead of transport glue.
+Genkit is good at connecting to AI providers. The A2UI Flutter renderer
+(`a2ui_flutter`) is good at safely rendering app-owned UI components from A2UI
+messages. This package connects those two pieces so app developers can focus on
+catalog design, routing policy, and product UX instead of transport glue.
 
 - `GenkitGenUiSession` bridges chat turns, GenUI catalog prompts, streamed model
   text, A2UI parsing, and local surface rendering.
@@ -39,7 +40,7 @@ llamadart   Gemini/OpenAI/etc   Genkit backend flow
 streamed text + A2UI JSON
         |
         v
-Flutter GenUI catalog renderer
+A2UI Flutter catalog renderer
 ```
 
 The model can only reference widgets that the app registered in its local
@@ -47,10 +48,10 @@ catalog. It cannot execute arbitrary Flutter code.
 
 ## Install
 
-Add the core adapter and the Genkit/GenUI APIs your app will use:
+Add the core adapter and the Genkit and A2UI APIs your app will use:
 
 ```sh
-flutter pub add genui_genkit genkit genui
+flutter pub add genui_genkit genkit a2ui_flutter
 ```
 
 Then add the Genkit provider plugin you want in the host app. For example:
@@ -69,7 +70,7 @@ This minimal example uses `LocalGenkitBackend` to show the session shape without
 requiring a provider key or a downloaded model:
 
 ```dart
-import 'package:genui/genui.dart';
+import 'package:a2ui_flutter/a2ui_flutter.dart';
 import 'package:genui_genkit/genui_genkit.dart';
 
 Future<void> main() async {
@@ -77,7 +78,10 @@ Future<void> main() async {
     backend: LocalGenkitBackend(
       generate: (request) => Stream.value('Hello ${request.message.text}'),
     ),
-    catalog: const Catalog([], catalogId: 'dev.example.app.v1'),
+    catalog: CatalogImplementation(
+      id: 'dev.example.app.v1',
+      components: const [],
+    ),
   );
 
   await session.sendText('GenUI');

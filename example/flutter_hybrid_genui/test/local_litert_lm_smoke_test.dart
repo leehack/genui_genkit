@@ -6,7 +6,7 @@ import 'package:flutter_hybrid_genui/src/model_config.dart';
 import 'package:flutter_hybrid_genui/src/runtime/app_runtime.dart';
 import 'package:flutter_hybrid_genui/src/runtime/cache_environment.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:genui/genui.dart';
+import 'package:genai_primitives/genai_primitives.dart';
 import 'package:genui_genkit/genui_genkit.dart';
 import 'package:integration_test/integration_test.dart';
 

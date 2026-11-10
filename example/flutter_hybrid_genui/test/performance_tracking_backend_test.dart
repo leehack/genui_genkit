@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_hybrid_genui/src/runtime/performance_tracking_backend.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:genui/genui.dart';
+import 'package:genai_primitives/genai_primitives.dart';
 import 'package:genui_genkit/genui_genkit.dart';
 
 void main() {

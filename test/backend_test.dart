@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:genai_primitives/genai_primitives.dart';
 import 'package:genkit/genkit.dart' as genkit;
-import 'package:genui/genui.dart';
 import 'package:genui_genkit/genui_genkit.dart';
 
 void main() {

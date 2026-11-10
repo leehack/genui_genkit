@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:genai_primitives/genai_primitives.dart';
 import 'package:genkit/genkit.dart' as genkit;
-import 'package:genui/genui.dart';
 import 'package:schemantic/schemantic.dart';
 
 import 'backend.dart';
+import 'ui_interaction.dart';
 
 /// Converts a GenUI chat message into a Genkit message.
 typedef GenkitMessageMapper = genkit.Message Function(ChatMessage message);
@@ -273,9 +274,7 @@ String defaultGenkitMessageText(ChatMessage message) {
     fragments.add(text);
   }
 
-  final interactions = message.parts.uiInteractionParts
-      .map((part) => part.interaction)
-      .toList(growable: false);
+  final interactions = uiInteractionsOf(message.parts).toList(growable: false);
   if (interactions.isNotEmpty) {
     fragments.add(
       'User interacted with generated UI: ${jsonEncode(interactions)}',

@@ -7,9 +7,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_hybrid_genui/src/activity_catalog.dart';
 import 'package:flutter_hybrid_genui/src/model_config.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:genui/genui.dart';
 import 'package:genui_genkit/genui_genkit.dart';
 import 'package:genui_genkit/src/a2ui_stream_repairer.dart';
+import 'package:genui_genkit/src/json_block_parser.dart';
 import 'package:llamadart/llamadart.dart' as llama;
 
 const _runBenchmark = bool.fromEnvironment('GENUI_RUN_LOCAL_QUALITY_BENCHMARK');
@@ -234,38 +234,41 @@ Future<_QualityAnalysis> _analyzeOutput(
   String output, {
   required bool repair,
 }) async {
-  final messages = <A2uiMessage>[];
+  final messages = <AgentToRendererMessage>[];
   final textBuffer = StringBuffer();
   final errors = <String>[];
-  Stream<String> stream = Stream.value(output);
+  Stream<String> stream = Stream.value(fenceA2uiJsonBlocks(output));
   if (repair) {
     stream = stream.transform(const A2uiStreamRepairer());
   }
 
   try {
-    await for (final event in stream.transform(const A2uiParserTransformer())) {
-      switch (event) {
-        case TextEvent(:final text):
-          textBuffer.write(text);
-        case A2uiMessageEvent(:final message):
-          messages.add(message);
+    final text = await stream.join();
+    for (final block in JsonBlockParser.parseJsonBlocks(text)) {
+      for (final json in block is List ? block : [block]) {
+        if (json is Map<String, Object?> && _looksLikeA2uiMessage(json)) {
+          messages.add(AgentToRendererMessage.fromJson(json));
+        }
       }
     }
+    textBuffer.write(JsonBlockParser.stripJsonBlock(text));
   } catch (error) {
     errors.add(error.toString());
   }
 
   final creates = messages.whereType<CreateSurfaceMessage>().toList();
   final updates = messages.whereType<UpdateComponentsMessage>().toList();
-  final components = updates
-      .expand((message) => message.components.map(Component.fromJson))
-      .toList();
-  final componentTypes = components.map((component) => component.type).toSet();
+  final components = updates.expand((message) => message.components).toList();
+  final componentTypes = components
+      .map((component) => component['component'])
+      .whereType<String>()
+      .toSet();
   final root = components
-      .where((component) => component.id == 'root')
+      .where((component) => component['id'] == 'root')
       .firstOrNull;
   final componentsById = {
-    for (final component in components) component.id: component,
+    for (final component in components)
+      if (component['id'] case final String id) id: component,
   };
   final visibleComponentTypes = _visibleComponentTypes(componentsById, root);
   final surfaceIds = {
@@ -283,10 +286,10 @@ Future<_QualityAnalysis> _analyzeOutput(
     componentTypes: componentTypes.toList()..sort(),
     visibleComponentTypes: visibleComponentTypes.toList()..sort(),
     hasCorrectCatalog: creates.any(
-      (message) => message.catalogId == activityCatalog.catalogId,
+      (message) => message.catalogId == activityCatalog.id,
     ),
     hasRoot: root != null,
-    rootType: root?.type,
+    rootType: root?['component'] as String?,
     score: _qualityScore(
       errors: errors,
       creates: creates,
@@ -308,9 +311,7 @@ int _qualityScore({
 }) {
   var score = 0;
   if (errors.isEmpty && (creates.isNotEmpty || updates.isNotEmpty)) score += 25;
-  if (creates.any(
-    (message) => message.catalogId == activityCatalog.catalogId,
-  )) {
+  if (creates.any((message) => message.catalogId == activityCatalog.id)) {
     score += 15;
   }
   if (_hasMatchingSurface(creates, updates)) score += 15;
@@ -332,20 +333,32 @@ int _qualityScore({
   return score.clamp(0, 100);
 }
 
+/// Whether [json] has a key of an A2UI message, as genui's parser checked.
+bool _looksLikeA2uiMessage(Map<String, Object?> json) {
+  const keys = {
+    'version',
+    'createSurface',
+    'updateComponents',
+    'updateDataModel',
+    'deleteSurface',
+  };
+  return json.keys.any(keys.contains);
+}
+
 Set<String> _visibleComponentTypes(
-  Map<String, Component> componentsById,
-  Component? root,
+  Map<String, Map<String, Object?>> componentsById,
+  Map<String, Object?>? root,
 ) {
   if (root == null) return const {};
 
   final visible = <String>{};
   final visited = <String>{};
 
-  void visit(Component component) {
-    if (!visited.add(component.id)) return;
-    visible.add(component.type);
+  void visit(Map<String, Object?> component) {
+    if (!visited.add(component['id']! as String)) return;
+    if (component['component'] case final String type) visible.add(type);
 
-    final children = component.properties['children'];
+    final children = component['children'];
     if (children is List) {
       for (final childId in children.whereType<String>()) {
         final child = componentsById[childId];

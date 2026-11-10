@@ -1,29 +1,33 @@
+import 'dart:async';
+
+import 'package:a2ui_flutter/a2ui_flutter.dart';
+import 'package:a2ui_flutter/v0_9/basic_catalog.dart' as v0_9;
 import 'package:flutter/material.dart';
-import 'package:genui/genui.dart';
 import 'package:json_schema_builder/json_schema_builder.dart';
 
-final Catalog activityCatalog = Catalog(
-  [
-    BasicCatalogItems.column,
+final CatalogImplementation activityCatalog = v0_9.basicCatalog().derive(
+  catalogId: 'dev.leehack.genui.activity.v1',
+  components: const ['Column'],
+  functions: const [],
+  addComponents: [
     itineraryPlanItem,
     activityCardItem,
     choicePickerItem,
     checklistItem,
   ],
-  catalogId: 'dev.leehack.genui.activity.v1',
-  systemPromptFragments: const [
+  instructions: const [
     'Use this catalog for compact activity and trip-planning interfaces.',
     'Prefer ItineraryPlan for multi-stop plans, ActivityCard for a single recommendation, Checklist for preparation steps, and ChoicePicker when you need user input.',
     'For planning requests, render at least one catalog component instead of returning prose only.',
     'When showing multiple visible components, make the root component a Column with children that reference the child component ids, then define each child as a flat component entry.',
     'For example, a plan with an activity card and checklist should use root Column children ["plan", "activity_card", "checklist"], with those three child ids defined separately.',
     'Column children must be component id strings, not inline component objects.',
-  ],
+  ].join('\n'),
 );
 
-final CatalogItem itineraryPlanItem = CatalogItem(
+final ComponentImplementation itineraryPlanItem = ComponentImplementation(
   name: 'ItineraryPlan',
-  dataSchema: S.object(
+  schema: S.object(
     description: 'A practical itinerary with stops, timing, and budget notes.',
     properties: {
       'title': S.string(description: 'Short itinerary title.'),
@@ -43,38 +47,15 @@ final CatalogItem itineraryPlanItem = CatalogItem(
       ),
     },
     required: ['title', 'summary', 'stops'],
+    // Accept properties the schema does not list, as genui's CatalogItem did.
+    additionalProperties: true,
   ),
-  exampleData: [
-    () => '''
-[
-  {
-    "id": "root",
-    "component": "ItineraryPlan",
-    "title": "Rainy afternoon under \$50",
-    "summary": "A compact indoor route with warm food and a flexible finish.",
-    "budget": "About \$38 before transit",
-    "stops": [
-      {
-        "time": "1:00 PM",
-        "title": "Small museum stop",
-        "details": "Start with a focused exhibit so the day has a clear anchor."
-      },
-      {
-        "time": "2:45 PM",
-        "title": "Coffee and pastry",
-        "details": "Use the break to compare the next two nearby options."
-      }
-    ]
-  }
-]
-''',
-  ],
-  widgetBuilder: (context) {
-    final data = context.data as Map<String, Object?>;
-    final title = data['title'] as String? ?? 'Itinerary';
-    final summary = data['summary'] as String? ?? '';
-    final budget = data['budget'] as String?;
-    final stops = (data['stops'] as List<Object?>? ?? const [])
+  builder: (context, node, props, buildChild) {
+    final title = props.string('title') ?? 'Itinerary';
+    final summary = props.string('summary') ?? '';
+    final budget = props.string('budget');
+    final stops = props
+        .list('stops')
         .whereType<Map<String, Object?>>()
         .toList();
 
@@ -92,8 +73,9 @@ final CatalogItem itineraryPlanItem = CatalogItem(
               Expanded(
                 child: Text(
                   title,
-                  style: Theme.of(context.buildContext).textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -112,9 +94,9 @@ final CatalogItem itineraryPlanItem = CatalogItem(
   },
 );
 
-final CatalogItem activityCardItem = CatalogItem(
+final ComponentImplementation activityCardItem = ComponentImplementation(
   name: 'ActivityCard',
-  dataSchema: S.object(
+  schema: S.object(
     description: 'A card describing one suggested activity.',
     properties: {
       'title': S.string(description: 'Short activity title.'),
@@ -126,27 +108,14 @@ final CatalogItem activityCardItem = CatalogItem(
       ),
     },
     required: ['title', 'description'],
+    // Accept properties the schema does not list, as genui's CatalogItem did.
+    additionalProperties: true,
   ),
-  exampleData: [
-    () => '''
-[
-  {
-    "id": "root",
-    "component": "ActivityCard",
-    "title": "Rainy afternoon museum stop",
-    "description": "Visit a compact museum, then warm up at a nearby cafe.",
-    "duration": "2-3 hours",
-    "costLevel": "medium"
-  }
-]
-''',
-  ],
-  widgetBuilder: (context) {
-    final data = context.data as Map<String, Object?>;
-    final title = data['title'] as String? ?? 'Untitled activity';
-    final description = data['description'] as String? ?? '';
-    final duration = data['duration'] as String?;
-    final costLevel = data['costLevel'] as String?;
+  builder: (context, node, props, buildChild) {
+    final title = props.string('title') ?? 'Untitled activity';
+    final description = props.string('description') ?? '';
+    final duration = props.string('duration');
+    final costLevel = props.string('costLevel');
 
     return _CatalogSurface(
       accent: _costColor(costLevel),
@@ -157,7 +126,7 @@ final CatalogItem activityCardItem = CatalogItem(
           Text(
             title,
             style: Theme.of(
-              context.buildContext,
+              context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
@@ -184,9 +153,9 @@ final CatalogItem activityCardItem = CatalogItem(
   },
 );
 
-final CatalogItem choicePickerItem = CatalogItem(
+final ComponentImplementation choicePickerItem = ComponentImplementation(
   name: 'ChoicePicker',
-  dataSchema: S.object(
+  schema: S.object(
     description: 'A small set of choices for the user.',
     properties: {
       'question': S.string(description: 'Question to ask the user.'),
@@ -197,11 +166,13 @@ final CatalogItem choicePickerItem = CatalogItem(
       ),
     },
     required: ['question', 'options'],
+    // Accept properties the schema does not list, as genui's CatalogItem did.
+    additionalProperties: true,
   ),
-  widgetBuilder: (context) {
-    final data = context.data as Map<String, Object?>;
-    final question = data['question'] as String? ?? 'Choose an option';
-    final options = (data['options'] as List<Object?>? ?? const [])
+  builder: (context, node, props, buildChild) {
+    final question = props.string('question') ?? 'Choose an option';
+    final options = props
+        .list('options')
         .map((value) => value.toString())
         .toList();
 
@@ -214,7 +185,7 @@ final CatalogItem choicePickerItem = CatalogItem(
           Text(
             question,
             style: Theme.of(
-              context.buildContext,
+              context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 12),
@@ -224,12 +195,13 @@ final CatalogItem choicePickerItem = CatalogItem(
             children: [
               for (final option in options)
                 OutlinedButton(
-                  onPressed: () => context.dispatchEvent(
-                    UserActionEvent(
-                      name: 'choiceSelected',
-                      sourceComponentId: context.id,
-                      context: {'choice': option},
-                    ),
+                  onPressed: () => unawaited(
+                    node.context?.dispatchAction({
+                      'event': {
+                        'name': 'choiceSelected',
+                        'context': {'choice': option},
+                      },
+                    }),
                   ),
                   child: Text(option),
                 ),
@@ -241,9 +213,9 @@ final CatalogItem choicePickerItem = CatalogItem(
   },
 );
 
-final CatalogItem checklistItem = CatalogItem(
+final ComponentImplementation checklistItem = ComponentImplementation(
   name: 'Checklist',
-  dataSchema: S.object(
+  schema: S.object(
     description: 'A checklist of preparation steps.',
     properties: {
       'title': S.string(description: 'Checklist title.'),
@@ -254,13 +226,12 @@ final CatalogItem checklistItem = CatalogItem(
       ),
     },
     required: ['title', 'items'],
+    // Accept properties the schema does not list, as genui's CatalogItem did.
+    additionalProperties: true,
   ),
-  widgetBuilder: (context) {
-    final data = context.data as Map<String, Object?>;
-    final title = data['title'] as String? ?? 'Checklist';
-    final items = (data['items'] as List<Object?>? ?? const [])
-        .map((value) => value.toString())
-        .toList();
+  builder: (context, node, props, buildChild) {
+    final title = props.string('title') ?? 'Checklist';
+    final items = props.list('items').map((value) => value.toString()).toList();
 
     return _CatalogSurface(
       accent: const Color(0xFF18334A),
@@ -271,7 +242,7 @@ final CatalogItem checklistItem = CatalogItem(
           Text(
             title,
             style: Theme.of(
-              context.buildContext,
+              context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),

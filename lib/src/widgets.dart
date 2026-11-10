@@ -1,5 +1,7 @@
+import 'package:a2ui_flutter/a2ui_flutter.dart';
+import 'package:a2ui_flutter/v0_9/basic_catalog.dart' show A2uiMarkdown;
 import 'package:flutter/material.dart';
-import 'package:genui/genui.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import 'session.dart';
 
@@ -73,11 +75,13 @@ final class GenUiMessageView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (message.surfaceId case final surfaceId?) {
+      final surface = session.processor.model.getSurface(surfaceId);
+      if (surface == null) return const SizedBox.shrink();
       return Align(
         alignment: Alignment.centerLeft,
-        child: Surface(
-          surfaceContext: session.surfaceController.contextFor(surfaceId),
-          defaultBuilder: (_) => const SizedBox.shrink(),
+        child: A2uiMarkdown(
+          builder: _buildMarkdown,
+          child: A2uiSurface(key: ObjectKey(surface), surface: surface),
         ),
       );
     }
@@ -111,6 +115,16 @@ final class GenUiMessageView extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Renders the Markdown of a surface's Text components, as `genui` did.
+Widget _buildMarkdown(BuildContext context, String markdown, TextStyle style) {
+  return MarkdownBody(
+    data: markdown,
+    styleSheet: MarkdownStyleSheet.fromTheme(
+      Theme.of(context),
+    ).copyWith(p: style),
+  );
 }
 
 /// Text input for submitting prompts to a GenUI session.

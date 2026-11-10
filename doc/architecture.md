@@ -1,8 +1,8 @@
 # Architecture
 
 `genui_genkit` separates model execution from Flutter rendering. Genkit
-providers produce text and A2UI JSON; Flutter GenUI renders only app-owned
-catalog widgets.
+providers produce text and A2UI JSON; the A2UI Flutter renderer
+(`a2ui_flutter`) renders only app-owned catalog widgets.
 
 ## Overview
 
@@ -35,11 +35,13 @@ Flutter process     by genkit_shelf           backend per turn
 2. The session builds a `GenUiTurnRequest` containing the message, history,
    catalog ID, system prompt, and metadata.
 3. A `GenUiBackend` streams `GenUiTextChunk` events.
-4. The session forwards raw chunks to debug listeners and to GenUI's A2UI
-   parser.
+4. The session forwards raw chunks to debug listeners. When the turn ends, it
+   repairs and parses the A2UI JSON blocks in the reply, written in
+   `<a2ui-json>` tags or markdown fences.
 5. Plain assistant text becomes chat messages.
-6. A2UI messages update the local `SurfaceController`.
-7. Flutter renders the referenced surface using the local catalog.
+6. A2UI messages update the session's A2UI `MessageProcessor`.
+7. Flutter renders the referenced surface with `A2uiSurface`, using the local
+   catalog.
 
 ```text
 text chunk: "Here is a plan..."
@@ -47,7 +49,7 @@ text chunk: "Here is a plan..."
 
 text chunk: {"version":"v0.9","createSurface":...}
         -> A2UI parser
-        -> SurfaceController
+        -> MessageProcessor
         -> registered Flutter widget
 ```
 

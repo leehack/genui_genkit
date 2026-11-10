@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:genui/genui.dart';
+import 'package:genai_primitives/genai_primitives.dart';
 
 /// Request sent from a GenUI session to a Genkit-backed backend.
 final class GenUiTurnRequest {
@@ -71,7 +71,8 @@ sealed class GenUiBackendEvent {
 
 /// A raw text chunk from the model/backend.
 ///
-/// Chunks may include normal assistant prose and/or fenced A2UI JSON blocks.
+/// Chunks may include normal assistant prose and/or A2UI JSON blocks, in
+/// `<a2ui-json>` tags or markdown fences.
 final class GenUiTextChunk extends GenUiBackendEvent {
   /// Creates a text chunk event.
   const GenUiTextChunk(this.text);

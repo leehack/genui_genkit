@@ -316,7 +316,7 @@ class _MainContent extends StatelessWidget {
           child: ConversationPane(
             controller: scrollController,
             messages: session.messages,
-            surfaceController: session.surfaceController,
+            processor: session.processor,
             isProcessing: session.isProcessing,
             surfaceKeys: surfaceKeys,
           ),
